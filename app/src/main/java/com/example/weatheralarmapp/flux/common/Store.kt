@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.flux
+package com.example.weatheralarmapp.flux.common
 
 import androidx.lifecycle.ViewModel
 
