@@ -31,6 +31,7 @@ import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.ui.common.ExpandButton
 import java.time.Duration
 import java.time.LocalTime
+import java.util.Calendar
 import kotlin.concurrent.timer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,7 +148,7 @@ fun AlarmItem(
 
                 val minuteStr: String =
                     if (timePicker.minute < 10) {
-                        "0${timePicker.minute}"
+                        if (timePicker.minute == 0) "00" else "0${timePicker.minute}"
                     } else {
                         timePicker.minute.toString()
                     }

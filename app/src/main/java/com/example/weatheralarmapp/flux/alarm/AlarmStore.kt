@@ -15,7 +15,7 @@ class AlarmStore(
     private val currentTime = Calendar.getInstance()
     private val minutesStr =
         if (currentTime.get(Calendar.MINUTE) < 10) {
-            "0${currentTime.get(Calendar.MINUTE)}"
+            if (currentTime.get(Calendar.MINUTE) == 0) "00" else "0${currentTime.get(Calendar.MINUTE)}"
         } else {
             "${currentTime.get(Calendar.MINUTE)}"
         }
