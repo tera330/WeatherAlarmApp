@@ -3,4 +3,7 @@
     <string name="select_time">時間を選択</string>
     <string name="cancel">キャンセル</string>
     <string name="ok">OK</string>
+    <string name="alarm_of_message">アラームはオフです</string>
+    <string name="timeUntilAlarm">%1$s時間%2$s分後にアラームが鳴ります</string>
+    <string name="tomorrow_alarm_message">明日にアラームが鳴ります</string>
 </resources>

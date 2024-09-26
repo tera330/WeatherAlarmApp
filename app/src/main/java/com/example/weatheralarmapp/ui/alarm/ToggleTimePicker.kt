@@ -36,23 +36,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.weatheralarmapp.R
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToggleTimePicker(
     onConfirm: (TimePickerState) -> Unit,
     onDismiss: () -> Unit,
+    alarmUiState: AlarmUiState,
 ) {
-    val currentTime = Calendar.getInstance()
-
     val timePickerState =
         rememberTimePickerState(
-            initialHour = currentTime.get(Calendar.HOUR_OF_DAY),
-            initialMinute = currentTime.get(Calendar.MINUTE),
+            initialHour = alarmUiState.alarmTime.substringBefore(":").toInt(),
+            initialMinute = alarmUiState.alarmTime.substringAfter(":").toInt(),
             is24Hour = true,
         )
-
     var showDial by remember { mutableStateOf(true) }
 
     val toggleIcon =
@@ -147,5 +144,6 @@ private fun DialTimePickerPreview() {
     ToggleTimePicker(
         onConfirm = {},
         onDismiss = {},
+        alarmUiState = AlarmUiState("8:00", "", false),
     )
 }
