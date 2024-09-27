@@ -31,7 +31,6 @@ import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.ui.common.ExpandButton
 import java.time.Duration
 import java.time.LocalTime
-import java.util.Calendar
 import kotlin.concurrent.timer
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +47,7 @@ fun AlarmItem(
     var hour by remember { mutableLongStateOf(0L) }
     var minute by remember { mutableLongStateOf(0L) }
 
-    Card(modifier = modifier.padding(10.dp)) {
+    Card(modifier = modifier.padding(5.dp)) {
         Column(
             modifier =
                 modifier
