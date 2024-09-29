@@ -144,6 +144,6 @@ private fun DialTimePickerPreview() {
     ToggleTimePicker(
         onConfirm = {},
         onDismiss = {},
-        alarmUiState = AlarmUiState("8:00", "", false),
+        alarmUiState = AlarmUiState(0, "8:00", false),
     )
 }
