@@ -118,7 +118,7 @@ fun WeatherAlarmApp(
                 .fillMaxSize()
                 .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
     ) {
         if (homeUiState.value.alarmItemList.isEmpty()) {
             Text(
