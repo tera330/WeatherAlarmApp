@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.ui.common.ExpandButton
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalTime
 import kotlin.concurrent.timer
@@ -40,12 +46,13 @@ fun AlarmItem(
     alarmUiState: AlarmUiState,
     onSwitchAlarm: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
+    onDeleteAlarm: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-
     var hour by remember { mutableLongStateOf(0L) }
     var minute by remember { mutableLongStateOf(0L) }
+    val scope = rememberCoroutineScope()
 
     Card(modifier = modifier.padding(5.dp)) {
         Column(
@@ -130,7 +137,18 @@ fun AlarmItem(
                 )
             }
             if (expanded) {
-                Spacer(modifier = Modifier.padding(20.dp))
+                Column(modifier = modifier) {
+                    IconButton(onClick = {
+                        scope.launch {
+                            onDeleteAlarm()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                        )
+                    }
+                }
                 // TODO 詳細を追加
             }
         }
@@ -151,7 +169,6 @@ fun AlarmItem(
                     } else {
                         timePicker.minute.toString()
                     }
-                // todo 現在は直接UiStateを更新しているが、DBから取得して更新するように変更する
                 if (timePicker.hour < 10) {
                     selectTime("${hourStr.substring(1)}:$minuteStr")
                 } else {
@@ -173,5 +190,6 @@ fun AlarmItemPreview() {
         alarmUiState = AlarmUiState(0, "", false),
         onSwitchAlarm = { Boolean -> },
         selectTime = { String -> },
+        onDeleteAlarm = { },
     )
 }

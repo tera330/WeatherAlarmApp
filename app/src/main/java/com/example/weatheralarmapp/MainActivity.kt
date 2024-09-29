@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -115,41 +117,55 @@ fun WeatherAlarmApp(
             modifier
                 .fillMaxSize()
                 .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        LazyColumn {
-            items(items = homeUiState.value.alarmItemList, key = { it.id }) { item ->
-                Column {
-                    AlarmItem(
-                        modifier = Modifier,
-                        alarmUiState =
-                            AlarmUiState(
-                                id = item.id,
-                                isAlarmOn = item.isAlarmOn,
-                                alarmTime = item.alarmTime,
-                            ),
-                        onSwitchAlarm = { Boolean ->
-                            scope.launch {
-                                alarmViewModel.updateAlarmItem(
-                                    AlarmItem(
-                                        id = item.id,
-                                        alarmTime = item.alarmTime,
-                                        isAlarmOn = Boolean,
-                                    ),
-                                )
-                            }
-                        },
-                        selectTime = { String ->
-                            scope.launch {
-                                alarmViewModel.updateAlarmItem(
-                                    AlarmItem(
-                                        id = item.id,
-                                        alarmTime = String,
-                                        isAlarmOn = item.isAlarmOn,
-                                    ),
-                                )
-                            }
-                        },
-                    )
+        if (homeUiState.value.alarmItemList.isEmpty()) {
+            Text(
+                text = "アラームがありません",
+                fontSize = 20.sp,
+            )
+        } else {
+            LazyColumn {
+                items(items = homeUiState.value.alarmItemList, key = { it.id }) { item ->
+                    Column {
+                        AlarmItem(
+                            modifier = Modifier,
+                            alarmUiState =
+                                AlarmUiState(
+                                    id = item.id,
+                                    isAlarmOn = item.isAlarmOn,
+                                    alarmTime = item.alarmTime,
+                                ),
+                            onSwitchAlarm = { Boolean ->
+                                scope.launch {
+                                    alarmViewModel.updateAlarmItem(
+                                        AlarmItem(
+                                            id = item.id,
+                                            alarmTime = item.alarmTime,
+                                            isAlarmOn = Boolean,
+                                        ),
+                                    )
+                                }
+                            },
+                            selectTime = { String ->
+                                scope.launch {
+                                    alarmViewModel.updateAlarmItem(
+                                        AlarmItem(
+                                            id = item.id,
+                                            alarmTime = String,
+                                            isAlarmOn = item.isAlarmOn,
+                                        ),
+                                    )
+                                }
+                            },
+                            onDeleteAlarm = {
+                                scope.launch {
+                                    alarmViewModel.deleteAlarmItem(item)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
