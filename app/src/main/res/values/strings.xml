@@ -6,4 +6,5 @@
     <string name="alarm_of_message">アラームはオフです</string>
     <string name="timeUntilAlarm">%1$s時間%2$s分後にアラームが鳴ります</string>
     <string name="tomorrow_alarm_message">明日にアラームが鳴ります</string>
+    <string name="alarm_title">アラーム</string>
 </resources>
