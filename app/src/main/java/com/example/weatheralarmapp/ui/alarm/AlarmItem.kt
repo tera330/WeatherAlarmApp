@@ -38,7 +38,7 @@ import kotlin.concurrent.timer
 fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
-    onChangeAlarm: (Boolean) -> Unit,
+    onSwitchAlarm: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -125,7 +125,7 @@ fun AlarmItem(
                 Switch(
                     checked = alarmUiState.isAlarmOn,
                     onCheckedChange = {
-                        onChangeAlarm(alarmUiState.isAlarmOn)
+                        onSwitchAlarm(!alarmUiState.isAlarmOn)
                     },
                 )
             }
@@ -151,6 +151,7 @@ fun AlarmItem(
                     } else {
                         timePicker.minute.toString()
                     }
+                // todo 現在は直接UiStateを更新しているが、DBから取得して更新するように変更する
                 if (timePicker.hour < 10) {
                     selectTime("${hourStr.substring(1)}:$minuteStr")
                 } else {
@@ -169,8 +170,8 @@ fun AlarmItem(
 fun AlarmItemPreview() {
     AlarmItem(
         modifier = Modifier,
-        alarmUiState = AlarmUiState("", "", false),
-        onChangeAlarm = { Boolean -> },
+        alarmUiState = AlarmUiState(0, "", false),
+        onSwitchAlarm = { Boolean -> },
         selectTime = { String -> },
     )
 }

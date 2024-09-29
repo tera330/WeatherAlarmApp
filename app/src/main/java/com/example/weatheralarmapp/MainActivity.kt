@@ -5,10 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,24 +20,36 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.weatheralarmapp.flux.FluxViewModel
-import com.example.weatheralarmapp.flux.alarm.SetAlarmActionCreator
-import com.example.weatheralarmapp.flux.common.Dispatcher
+import com.example.weatheralarmapp.data.AlarmDatabase
+import com.example.weatheralarmapp.data.AlarmItem
+import com.example.weatheralarmapp.data.AlarmItemRepository
+import com.example.weatheralarmapp.data.AlarmItemRepositoryImpl
 import com.example.weatheralarmapp.ui.alarm.AlarmItem
+import com.example.weatheralarmapp.ui.alarm.AlarmUiState
+import com.example.weatheralarmapp.ui.alarm.ToggleTimePicker
+import com.example.weatheralarmapp.ui.home.HomeUiState
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject lateinit var dispatcher: Dispatcher
-
-    @Inject lateinit var alarmActionCreator: SetAlarmActionCreator
+    @Inject lateinit var alarmItemRepository: AlarmItemRepository
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,13 +57,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeatherAlarmAppTheme {
+                var showTimePicker by remember { mutableStateOf(false) }
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
                         TopAppBar(
                             title = {
                                 Text(
-                                    text = "アラーム",
+                                    text = stringResource(R.string.alarm_title),
                                     fontSize = 25.sp,
                                 )
                             },
@@ -59,7 +73,7 @@ class MainActivity : ComponentActivity() {
                     },
                     floatingActionButton = {
                         LargeFloatingActionButton(
-                            onClick = { /*TODO*/ },
+                            onClick = { showTimePicker = !showTimePicker },
                             shape = CircleShape,
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = "Add")
@@ -69,8 +83,11 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     WeatherAlarmApp(
                         modifier = Modifier.padding(innerPadding),
-                        dispatcher = dispatcher,
-                        setAlarmActionCreator = alarmActionCreator,
+                        showTimePicker = showTimePicker,
+                        onShowTimePickerChange = { Boolean ->
+                            showTimePicker = Boolean
+                        },
+                        alarmItemRepository = alarmItemRepository,
                     )
                 }
             }
@@ -78,36 +95,95 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherAlarmApp(
     modifier: Modifier,
-    dispatcher: Dispatcher,
-    setAlarmActionCreator: SetAlarmActionCreator,
-    fluxViewModel: FluxViewModel =
+    alarmItemRepository: AlarmItemRepository,
+    alarmViewModel: AlarmViewModel =
         viewModel {
-            FluxViewModel(dispatcher)
+            AlarmViewModel(alarmItemRepository)
         },
+    showTimePicker: Boolean,
+    onShowTimePickerChange: (Boolean) -> Unit,
+    alarmUiState: AlarmUiState = alarmViewModel.alarmUiState.value,
+    homeUiState: State<HomeUiState> = alarmViewModel.homeUiState.collectAsState(),
 ) {
-    val alarmStore = fluxViewModel.alarmStore
-    val alarmUiState = alarmStore.uiState.value
-
+    val scope = rememberCoroutineScope()
     Column(
         modifier =
             modifier
                 .fillMaxSize()
                 .padding(10.dp),
     ) {
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 100.dp),
-        ) {
-            items(10) {
-                AlarmItem(
-                    modifier = Modifier,
-                    alarmUiState = alarmUiState,
-                    onChangeAlarm = { Boolean -> setAlarmActionCreator.setAlarmOn(Boolean) },
-                    selectTime = { String -> setAlarmActionCreator.setAlarmTime(String) },
-                )
+        LazyColumn {
+            items(items = homeUiState.value.alarmItemList, key = { it.id }) { item ->
+                Column {
+                    AlarmItem(
+                        modifier = Modifier,
+                        alarmUiState =
+                            AlarmUiState(
+                                id = item.id,
+                                isAlarmOn = item.isAlarmOn,
+                                alarmTime = item.alarmTime,
+                            ),
+                        onSwitchAlarm = { Boolean ->
+                            scope.launch {
+                                alarmViewModel.updateAlarmItem(
+                                    AlarmItem(
+                                        id = item.id,
+                                        alarmTime = item.alarmTime,
+                                        isAlarmOn = Boolean,
+                                    ),
+                                )
+                            }
+                        },
+                        selectTime = { String ->
+                            scope.launch {
+                                alarmViewModel.updateAlarmItem(
+                                    AlarmItem(
+                                        id = item.id,
+                                        alarmTime = String,
+                                        isAlarmOn = item.isAlarmOn,
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                }
             }
+        }
+        if (showTimePicker) {
+            ToggleTimePicker(
+                onConfirm = { timePicker ->
+                    val hourStr: String =
+                        if (timePicker.hour < 10) {
+                            "0${timePicker.hour}"
+                        } else {
+                            timePicker.hour.toString()
+                        }
+
+                    val minuteStr: String =
+                        if (timePicker.minute < 10) {
+                            if (timePicker.minute == 0) "00" else "0${timePicker.minute}"
+                        } else {
+                            timePicker.minute.toString()
+                        }
+
+                    scope.launch {
+                        alarmViewModel.addAlarmItem(
+                            AlarmItem(
+                                id = alarmUiState.id,
+                                alarmTime = "$hourStr:$minuteStr",
+                                isAlarmOn = alarmUiState.isAlarmOn,
+                            ),
+                        )
+                    }
+                    onShowTimePickerChange(false)
+                },
+                onDismiss = { onShowTimePickerChange(false) },
+                alarmUiState = alarmUiState,
+            )
         }
     }
 }
@@ -115,9 +191,15 @@ fun WeatherAlarmApp(
 @Preview
 @Composable
 fun WeatherAlarmAppPreview() {
+    val context = LocalContext.current
+    val alarmItemRepository: AlarmItemRepository by lazy {
+        AlarmItemRepositoryImpl(AlarmDatabase.getDatabase(context).alarmItemDao())
+    }
+
     WeatherAlarmApp(
         modifier = Modifier.fillMaxSize(),
-        dispatcher = Dispatcher(),
-        setAlarmActionCreator = SetAlarmActionCreator(Dispatcher()),
+        alarmItemRepository = alarmItemRepository,
+        showTimePicker = false,
+        onShowTimePickerChange = { Boolean -> },
     )
 }
