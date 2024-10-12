@@ -148,12 +148,12 @@ fun AlarmItem(
                 Switch(
                     checked = alarmUiState.isAlarmOn,
                     onCheckedChange = {
+                        onSwitchAlarm(!alarmUiState.isAlarmOn)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (!alarmManager.canScheduleExactAlarms() && !alarmUiState.isAlarmOn) {
+                            if (!alarmManager.canScheduleExactAlarms() && alarmUiState.isAlarmOn) {
                                 openDialog.value = true
                             }
                         }
-                        onSwitchAlarm(!alarmUiState.isAlarmOn)
                     },
                 )
             }
