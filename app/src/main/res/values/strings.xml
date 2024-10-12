@@ -9,6 +9,7 @@
     <string name="alarm_title">アラーム</string>
     <string name="confirm">確認</string>
     <string name="Cancel">キャンセル</string>
+    <string name="nothing_alarm">アラームがありません</string>
     <string name="allow_permission_set_alarm">アラーム設定の権限を許可</string>
     <string name="request_exact_alarm_permission">アラームを設定するには、アプリに特別な権限を付与してください</string>
     <string name="allow_alarm_popup_notification">アラームのポップアップ通知を許可</string>

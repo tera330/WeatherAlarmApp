@@ -1,11 +1,16 @@
 package com.example.weatheralarmapp
 
+import android.app.AlarmManager
+import android.app.Application
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,13 +51,16 @@ import com.example.weatheralarmapp.ui.alarm.ToggleTimePicker
 import com.example.weatheralarmapp.ui.home.HomeUiState
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var alarmItemRepository: AlarmItemRepository
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,36 +105,42 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherAlarmApp(
     modifier: Modifier,
+    context: Application = LocalContext.current.applicationContext as Application,
     alarmItemRepository: AlarmItemRepository,
     alarmViewModel: AlarmViewModel =
         viewModel {
-            AlarmViewModel(alarmItemRepository)
+            AlarmViewModel(
+                context.applicationContext as Application,
+                alarmItemRepository,
+            )
         },
     showTimePicker: Boolean,
     onShowTimePickerChange: (Boolean) -> Unit,
     alarmUiState: AlarmUiState = alarmViewModel.alarmUiState.value,
     homeUiState: State<HomeUiState> = alarmViewModel.homeUiState.collectAsState(),
 ) {
+    val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
     val scope = rememberCoroutineScope()
     Column(
         modifier =
-            modifier
-                .fillMaxSize()
-                .padding(10.dp),
+        modifier
+            .fillMaxSize()
+            .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
         if (homeUiState.value.alarmItemList.isEmpty()) {
             Text(
-                text = "アラームがありません",
+                text = stringResource(R.string.nothing_alarm),
                 fontSize = 20.sp,
             )
         } else {
-            LazyColumn {
+            LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
                 items(items = homeUiState.value.alarmItemList, key = { it.id }) { item ->
                     Column {
                         AlarmItem(
@@ -139,31 +153,40 @@ fun WeatherAlarmApp(
                                 ),
                             onSwitchAlarm = { Boolean ->
                                 scope.launch {
-                                    alarmViewModel.updateAlarmItem(
-                                        AlarmItem(
-                                            id = item.id,
-                                            alarmTime = item.alarmTime,
-                                            isAlarmOn = Boolean,
-                                        ),
-                                    )
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = item.alarmTime,
+                                                isAlarmOn = Boolean,
+                                            ),
+                                        )
+                                    }
                                 }
                             },
                             selectTime = { String ->
                                 scope.launch {
-                                    alarmViewModel.updateAlarmItem(
-                                        AlarmItem(
-                                            id = item.id,
-                                            alarmTime = String,
-                                            isAlarmOn = item.isAlarmOn,
-                                        ),
-                                    )
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = String,
+                                                isAlarmOn = item.isAlarmOn,
+                                            ),
+                                        )
+                                    }
                                 }
                             },
                             onDeleteAlarm = {
                                 scope.launch {
-                                    alarmViewModel.deleteAlarmItem(item)
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.deleteAlarmItem(item, alarmManager)
+                                    }
                                 }
                             },
+                            alarmManager = alarmManager,
                         )
                     }
                 }
@@ -188,6 +211,7 @@ fun WeatherAlarmApp(
 
                     scope.launch {
                         alarmViewModel.addAlarmItem(
+                            alarmManager = alarmManager,
                             AlarmItem(
                                 id = alarmUiState.id,
                                 alarmTime = "$hourStr:$minuteStr",
@@ -204,6 +228,7 @@ fun WeatherAlarmApp(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
 fun WeatherAlarmAppPreview() {
