@@ -7,4 +7,13 @@
     <string name="timeUntilAlarm">%1$s時間%2$s分後にアラームが鳴ります</string>
     <string name="tomorrow_alarm_message">明日にアラームが鳴ります</string>
     <string name="alarm_title">アラーム</string>
+    <string name="confirm">確認</string>
+    <string name="Cancel">キャンセル</string>
+    <string name="nothing_alarm">アラームがありません</string>
+    <string name="allow_permission_set_alarm">アラーム設定の権限を許可</string>
+    <string name="request_exact_alarm_permission">アラームを設定するには、アプリに特別な権限を付与してください</string>
+    <string name="allow_alarm_popup_notification">アラームのポップアップ通知を許可</string>
+    <string name="alarm_popup_notifications_description">スヌーズボタンと停止ボタンを備えたポップアップ通知を表示することを許可します</string>
+    <string name="alarm_stop_notification_description">%1$s:%2$s スワイプすると停止します</string>
+    <string name="stop_alarm">停止</string>
 </resources>

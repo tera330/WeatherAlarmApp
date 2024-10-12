@@ -1,6 +1,8 @@
 package com.example.weatheralarmapp.ui.alarm
 
+import android.app.AlarmManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -21,24 +23,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.weatheralarmapp.R
+import com.example.weatheralarmapp.dateformat.createHourString
+import com.example.weatheralarmapp.dateformat.createMinuteString
 import com.example.weatheralarmapp.ui.common.ExpandButton
-import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalTime
 import kotlin.concurrent.timer
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmItem(
@@ -47,12 +52,22 @@ fun AlarmItem(
     onSwitchAlarm: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
     onDeleteAlarm: () -> Unit,
+    alarmManager: AlarmManager,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var hour by remember { mutableLongStateOf(0L) }
     var minute by remember { mutableLongStateOf(0L) }
-    val scope = rememberCoroutineScope()
+    val openDialog =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
+            remember { mutableStateOf(false) }
+        } else {
+            remember { mutableStateOf(true) }
+        }
+    var secondsUntilNextMinute by remember { mutableIntStateOf(0) }
+    var duration by remember {
+        mutableStateOf(Duration.ZERO)
+    }
 
     Card(modifier = modifier.padding(5.dp)) {
         Column(
@@ -92,7 +107,7 @@ fun AlarmItem(
                 if (alarmUiState.isAlarmOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     var currentTime by remember { mutableStateOf(LocalTime.now().withSecond(0).withNano(0)) }
                     val currentSecond = LocalTime.now().second
-                    val secondsUntilNextMinute = 60 - currentSecond
+                    secondsUntilNextMinute = 60 - currentSecond
 
                     timer("updateCurrentTimeTimer", period = 60 * 1000L, initialDelay = secondsUntilNextMinute * 1000L) {
                         currentTime = LocalTime.now().withSecond(0).withNano(0)
@@ -105,8 +120,9 @@ fun AlarmItem(
                             LocalTime.parse("0${alarmUiState.alarmTime}")
                         }
 
+                    // アラームの設定時間と現在時刻の差分を計算
                     LaunchedEffect(currentTime, alarmUiState.alarmTime) {
-                        val duration =
+                        duration =
                             if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
                                 Duration.between(currentTime, alarmTime)
                             } else {
@@ -133,15 +149,20 @@ fun AlarmItem(
                     checked = alarmUiState.isAlarmOn,
                     onCheckedChange = {
                         onSwitchAlarm(!alarmUiState.isAlarmOn)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (!alarmManager.canScheduleExactAlarms() && alarmUiState.isAlarmOn) {
+                                openDialog.value = true
+                            }
+                        }
                     },
                 )
             }
+            RequestExactAlarmPermission(openDialog = openDialog)
+
             if (expanded) {
                 Column(modifier = modifier) {
                     IconButton(onClick = {
-                        scope.launch {
-                            onDeleteAlarm()
-                        }
+                        onDeleteAlarm()
                     }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -156,24 +177,9 @@ fun AlarmItem(
     if (showTimePicker) {
         ToggleTimePicker(
             onConfirm = { timePicker ->
-                val hourStr: String =
-                    if (timePicker.hour < 10) {
-                        "0${timePicker.hour}"
-                    } else {
-                        timePicker.hour.toString()
-                    }
-
-                val minuteStr: String =
-                    if (timePicker.minute < 10) {
-                        if (timePicker.minute == 0) "00" else "0${timePicker.minute}"
-                    } else {
-                        timePicker.minute.toString()
-                    }
-                if (timePicker.hour < 10) {
-                    selectTime("${hourStr.substring(1)}:$minuteStr")
-                } else {
-                    selectTime("$hourStr:$minuteStr")
-                }
+                val hourStr: String = createHourString(timePicker.hour)
+                val minuteStr: String = createMinuteString(timePicker.minute)
+                selectTime("$hourStr:$minuteStr")
                 showTimePicker = false
             },
             onDismiss = { showTimePicker = false },
@@ -182,14 +188,19 @@ fun AlarmItem(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
 fun AlarmItemPreview() {
+    val context = LocalContext.current
+    val alarmManager = remember { context.applicationContext.getSystemService(AlarmManager::class.java) as AlarmManager }
+
     AlarmItem(
         modifier = Modifier,
         alarmUiState = AlarmUiState(0, "", false),
         onSwitchAlarm = { Boolean -> },
         selectTime = { String -> },
         onDeleteAlarm = { },
+        alarmManager = alarmManager,
     )
 }
