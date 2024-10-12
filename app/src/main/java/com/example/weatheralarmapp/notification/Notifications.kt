@@ -37,8 +37,13 @@ fun sendAlarmNotification(
             .Builder(context, CHANNEL_ID_HIGH_PRIORITY)
             .setSmallIcon(R.drawable.baseline_alarm_24)
             .setContentTitle(context.getString(R.string.alarm_title))
-            .setContentText(context.getString(R.string.alarm_stop_notification_description, createHourString(currentTime.hour), createMinuteString(currentTime.minute)))
-            .setAutoCancel(true)
+            .setContentText(
+                context.getString(
+                    R.string.alarm_stop_notification_description,
+                    createHourString(currentTime.hour),
+                    createMinuteString(currentTime.minute),
+                ),
+            ).setAutoCancel(true)
             .setContentIntent(activeAlarmPendingIntent)
             .setFullScreenIntent(activeAlarmPendingIntent, true)
             .setDeleteIntent(stopAlarmPendingIntent)

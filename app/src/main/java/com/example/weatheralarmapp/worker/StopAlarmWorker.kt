@@ -2,10 +2,8 @@ package com.example.weatheralarmapp.worker
 
 import android.app.NotificationManager
 import android.content.Context
-import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.example.weatheralarmapp.notification.CHANNEL_ID_HIGH_PRIORITY
 import com.example.weatheralarmapp.sound.ExoPlayerManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

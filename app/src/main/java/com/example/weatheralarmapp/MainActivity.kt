@@ -128,9 +128,9 @@ fun WeatherAlarmApp(
     val scope = rememberCoroutineScope()
     Column(
         modifier =
-        modifier
-            .fillMaxSize()
-            .padding(10.dp),
+            modifier
+                .fillMaxSize()
+                .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {

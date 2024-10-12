@@ -18,7 +18,8 @@ class ExactAlarmPermissionReceiver : BroadcastReceiver() {
                 val canScheduleAlarms = alarmManager.canScheduleExactAlarms()
                 if (canScheduleAlarms) {
                     // TODO アラームの再スケジュール
-                } else { }
+                } else {
+                }
             }
         }
     }

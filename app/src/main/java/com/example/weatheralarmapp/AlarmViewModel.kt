@@ -34,6 +34,7 @@ class AlarmViewModel(
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }
+
     @SuppressLint("StaticFieldLeak")
     private val context = application.applicationContext
 

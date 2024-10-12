@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,7 +154,7 @@ fun AlarmItem(
                             }
                         }
                         onSwitchAlarm(!alarmUiState.isAlarmOn)
-                                      },
+                    },
                 )
             }
             RequestExactAlarmPermission(openDialog = openDialog)
@@ -180,7 +179,7 @@ fun AlarmItem(
             onConfirm = { timePicker ->
                 val hourStr: String = createHourString(timePicker.hour)
                 val minuteStr: String = createMinuteString(timePicker.minute)
-                selectTime("${hourStr}:$minuteStr")
+                selectTime("$hourStr:$minuteStr")
                 showTimePicker = false
             },
             onDismiss = { showTimePicker = false },
