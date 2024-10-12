@@ -7,7 +7,7 @@ import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.weatheralarmapp.sound.ExoPlayerManager
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 
-class AlarmActivity : AppCompatActivity() {
+class AlarmActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O_MR1)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
