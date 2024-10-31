@@ -45,6 +45,8 @@ import com.example.weatheralarmapp.data.AlarmDatabase
 import com.example.weatheralarmapp.data.AlarmItem
 import com.example.weatheralarmapp.data.AlarmItemRepository
 import com.example.weatheralarmapp.data.AlarmItemRepositoryImpl
+import com.example.weatheralarmapp.data.GetWeatherRepositoryImpl
+import com.example.weatheralarmapp.network.WeatherApi
 import com.example.weatheralarmapp.ui.alarm.AlarmItem
 import com.example.weatheralarmapp.ui.alarm.AlarmUiState
 import com.example.weatheralarmapp.ui.alarm.ToggleTimePicker
@@ -59,6 +61,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var alarmItemRepository: AlarmItemRepository
+
+    @Inject lateinit var getWeatherRepository: GetWeatherRepositoryImpl
 
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +102,7 @@ class MainActivity : ComponentActivity() {
                             showTimePicker = Boolean
                         },
                         alarmItemRepository = alarmItemRepository,
+                        getWeatherRepository = getWeatherRepository,
                     )
                 }
             }
@@ -112,11 +117,13 @@ fun WeatherAlarmApp(
     modifier: Modifier,
     context: Application = LocalContext.current.applicationContext as Application,
     alarmItemRepository: AlarmItemRepository,
+    getWeatherRepository: GetWeatherRepositoryImpl,
     alarmViewModel: AlarmViewModel =
         viewModel {
             AlarmViewModel(
                 context.applicationContext as Application,
                 alarmItemRepository,
+                getWeatherRepository,
             )
         },
     showTimePicker: Boolean,
@@ -236,10 +243,12 @@ fun WeatherAlarmAppPreview() {
     val alarmItemRepository: AlarmItemRepository by lazy {
         AlarmItemRepositoryImpl(AlarmDatabase.getDatabase(context).alarmItemDao())
     }
+    val weatherApiService = WeatherApi.retrofitService
 
     WeatherAlarmApp(
         modifier = Modifier.fillMaxSize(),
         alarmItemRepository = alarmItemRepository,
+        getWeatherRepository = GetWeatherRepositoryImpl(weatherApiService),
         showTimePicker = false,
         onShowTimePickerChange = { Boolean -> },
     )

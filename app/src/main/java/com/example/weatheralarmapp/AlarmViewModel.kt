@@ -14,15 +14,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.weatheralarmapp.data.AlarmItem
 import com.example.weatheralarmapp.data.AlarmItemRepository
+import com.example.weatheralarmapp.data.GetWeatherRepositoryImpl
 import com.example.weatheralarmapp.dateformat.createHourString
 import com.example.weatheralarmapp.dateformat.createMinuteString
 import com.example.weatheralarmapp.receiver.AlarmReceiver
 import com.example.weatheralarmapp.ui.alarm.AlarmUiState
 import com.example.weatheralarmapp.ui.home.HomeUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.util.Calendar
 
@@ -30,6 +34,7 @@ import java.util.Calendar
 class AlarmViewModel(
     application: Application,
     private val alarmItemRepository: AlarmItemRepository,
+    private val getWeatherRepositoryImpl: GetWeatherRepositoryImpl,
 ) : AndroidViewModel(application) {
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
@@ -56,6 +61,11 @@ class AlarmViewModel(
                 started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
                 initialValue = HomeUiState(),
             )
+
+    private var _coordinateState: MutableState<CoordinateState> = mutableStateOf(CoordinateState.Initial)
+    private var _weatherState: MutableState<WeatherState> = mutableStateOf(WeatherState.Initial)
+    val weatherState: State<WeatherState>
+        get() = _weatherState
 
     suspend fun addAlarmItem(
         alarmManager: AlarmManager,
@@ -148,4 +158,64 @@ class AlarmViewModel(
             )
         alarmManager.cancel(pendingIntent)
     }
+
+    fun getWeatherByCityName(cityName: String) {
+        viewModelScope.launch {
+            _coordinateState.value = CoordinateState.Loading
+            try {
+                val result =
+                    withContext(Dispatchers.IO) {
+                        getWeatherRepositoryImpl.getCoordinate(cityName)
+                    }
+                _coordinateState.value = CoordinateState.Success(result.lat, result.lon)
+                getWeatherByLocation(result.lat, result.lon)
+            } catch (e: Exception) {
+                _coordinateState.value = CoordinateState.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    private fun getWeatherByLocation(
+        lat: Double,
+        lon: Double,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _weatherState.value = WeatherState.Loading
+            try {
+                val result = getWeatherRepositoryImpl.getWeather(lat, lon)
+                _weatherState.value = WeatherState.Success(result.weather[0].description)
+            } catch (e: Exception) {
+                _weatherState.value = WeatherState.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+}
+
+sealed interface CoordinateState {
+    data object Initial : CoordinateState
+
+    data object Loading : CoordinateState
+
+    data class Success(
+        val lat: Double,
+        val lon: Double,
+    ) : CoordinateState
+
+    data class Error(
+        val message: String,
+    ) : CoordinateState
+}
+
+sealed interface WeatherState {
+    data object Initial : WeatherState
+
+    data object Loading : WeatherState
+
+    data class Success(
+        val weather: String,
+    ) : WeatherState
+
+    data class Error(
+        val message: String,
+    ) : WeatherState
 }
