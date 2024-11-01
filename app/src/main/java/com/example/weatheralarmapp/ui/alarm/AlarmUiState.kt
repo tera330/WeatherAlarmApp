@@ -4,4 +4,5 @@ data class AlarmUiState(
     val id: Int,
     val alarmTime: String,
     val isAlarmOn: Boolean,
+    val isWeatherForecastOn: Boolean,
 )

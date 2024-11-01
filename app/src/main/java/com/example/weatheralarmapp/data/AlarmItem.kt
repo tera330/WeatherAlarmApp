@@ -9,4 +9,5 @@ data class AlarmItem(
     val id: Int = 0,
     val alarmTime: String,
     val isAlarmOn: Boolean,
+    val isWeatherForecastOn: Boolean,
 )

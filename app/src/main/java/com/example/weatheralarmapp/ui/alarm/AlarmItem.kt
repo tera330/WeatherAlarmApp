@@ -50,6 +50,7 @@ fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
     onSwitchAlarm: (Boolean) -> Unit,
+    onSwitchWeatherForecast: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
     onDeleteAlarm: () -> Unit,
     alarmManager: AlarmManager,
@@ -104,59 +105,63 @@ fun AlarmItem(
                 modifier = modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (alarmUiState.isAlarmOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    var currentTime by remember { mutableStateOf(LocalTime.now().withSecond(0).withNano(0)) }
-                    val currentSecond = LocalTime.now().second
-                    secondsUntilNextMinute = 60 - currentSecond
+                val alarmText =
+                    if (alarmUiState.isAlarmOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        var currentTime by remember { mutableStateOf(LocalTime.now().withSecond(0).withNano(0)) }
+                        val currentSecond = LocalTime.now().second
+                        secondsUntilNextMinute = 60 - currentSecond
 
-                    timer("updateCurrentTimeTimer", period = 60 * 1000L, initialDelay = secondsUntilNextMinute * 1000L) {
-                        currentTime = LocalTime.now().withSecond(0).withNano(0)
-                    }
-
-                    val alarmTime =
-                        if (alarmUiState.alarmTime.length == 5) {
-                            LocalTime.parse(alarmUiState.alarmTime)
-                        } else {
-                            LocalTime.parse("0${alarmUiState.alarmTime}")
+                        timer("updateCurrentTimeTimer", period = 60 * 1000L, initialDelay = secondsUntilNextMinute * 1000L) {
+                            currentTime = LocalTime.now().withSecond(0).withNano(0)
                         }
 
-                    // アラームの設定時間と現在時刻の差分を計算
-                    LaunchedEffect(currentTime, alarmUiState.alarmTime) {
-                        duration =
-                            if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
-                                Duration.between(currentTime, alarmTime)
+                        val alarmTime =
+                            if (alarmUiState.alarmTime.length == 5) {
+                                LocalTime.parse(alarmUiState.alarmTime)
                             } else {
-                                val durationUntilMidnight =
-                                    Duration.between(currentTime, LocalTime.MIDNIGHT)
-                                val durationAfterMidnight =
-                                    Duration.between(LocalTime.MIDNIGHT, alarmTime)
-                                durationUntilMidnight.plus(durationAfterMidnight + Duration.ofDays(1))
+                                LocalTime.parse("0${alarmUiState.alarmTime}")
                             }
-                        if (duration.toMinutes() >= 60) {
-                            hour = duration.toMinutes() / 60
-                            minute = duration.toMinutes() % 60
-                        } else {
-                            hour = 0
-                            minute = duration.toMinutes()
+
+                        // アラームの設定時間と現在時刻の差分を計算
+                        LaunchedEffect(currentTime, alarmUiState.alarmTime) {
+                            duration =
+                                if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
+                                    Duration.between(currentTime, alarmTime)
+                                } else {
+                                    val durationUntilMidnight =
+                                        Duration.between(currentTime, LocalTime.MIDNIGHT)
+                                    val durationAfterMidnight =
+                                        Duration.between(LocalTime.MIDNIGHT, alarmTime)
+                                    durationUntilMidnight.plus(durationAfterMidnight + Duration.ofDays(1))
+                                }
+                            if (duration.toMinutes() >= 60) {
+                                hour = duration.toMinutes() / 60
+                                minute = duration.toMinutes() % 60
+                            } else {
+                                hour = 0
+                                minute = duration.toMinutes()
+                            }
                         }
+                        stringResource(R.string.timeUntilAlarm, hour, minute)
+                    } else {
+                        stringResource(R.string.alarm_of_message)
                     }
-                    Text(text = stringResource(R.string.timeUntilAlarm, hour, minute))
-                } else {
-                    Text(text = stringResource(R.string.alarm_of_message))
-                }
-                Spacer(modifier = modifier.weight(1f))
-                Switch(
-                    checked = alarmUiState.isAlarmOn,
-                    onCheckedChange = {
-                        onSwitchAlarm(!alarmUiState.isAlarmOn)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (!alarmManager.canScheduleExactAlarms() && alarmUiState.isAlarmOn) {
-                                openDialog.value = true
-                            }
-                        }
-                    },
+
+                TextSwitchRow(
+                    modifier = modifier,
+                    text = alarmText,
+                    isChecked = alarmUiState.isAlarmOn,
+                    onSwitch = { onSwitchAlarm(it) },
                 )
             }
+
+            TextSwitchRow(
+                modifier = modifier,
+                text = "天気予報機能",
+                isChecked = alarmUiState.isWeatherForecastOn,
+                onSwitch = { onSwitchWeatherForecast(it) },
+            )
+
             RequestExactAlarmPermission(openDialog = openDialog)
 
             if (expanded) {
@@ -188,6 +193,39 @@ fun AlarmItem(
     }
 }
 
+@Composable
+fun TextSwitchRow(
+    modifier: Modifier,
+    text: String,
+    isChecked: Boolean,
+    onSwitch: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = text)
+        Spacer(modifier = modifier.weight(1f))
+        Switch(
+            checked = isChecked,
+            onCheckedChange = {
+                onSwitch(!isChecked)
+            },
+        )
+    }
+}
+
+@Preview
+@Composable
+fun TextSwitchRowPreview() {
+    TextSwitchRow(
+        modifier = Modifier,
+        text = "天気予報機能",
+        isChecked = false,
+        onSwitch = { Boolean -> },
+    )
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
@@ -197,8 +235,9 @@ fun AlarmItemPreview() {
 
     AlarmItem(
         modifier = Modifier,
-        alarmUiState = AlarmUiState(0, "", false),
+        alarmUiState = AlarmUiState(0, "", false, false),
         onSwitchAlarm = { Boolean -> },
+        onSwitchWeatherForecast = { Boolean -> },
         selectTime = { String -> },
         onDeleteAlarm = { },
         alarmManager = alarmManager,

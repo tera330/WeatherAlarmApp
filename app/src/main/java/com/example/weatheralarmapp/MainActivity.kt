@@ -156,6 +156,7 @@ fun WeatherAlarmApp(
                                 AlarmUiState(
                                     id = item.id,
                                     isAlarmOn = item.isAlarmOn,
+                                    isWeatherForecastOn = item.isWeatherForecastOn,
                                     alarmTime = item.alarmTime,
                                 ),
                             onSwitchAlarm = { Boolean ->
@@ -167,6 +168,22 @@ fun WeatherAlarmApp(
                                                 id = item.id,
                                                 alarmTime = item.alarmTime,
                                                 isAlarmOn = Boolean,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                            ),
+                                        )
+                                    }
+                                }
+                            },
+                            onSwitchWeatherForecast = { Boolean ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = item.alarmTime,
+                                                isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = Boolean,
                                             ),
                                         )
                                     }
@@ -181,6 +198,7 @@ fun WeatherAlarmApp(
                                                 id = item.id,
                                                 alarmTime = String,
                                                 isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
                                             ),
                                         )
                                     }
@@ -223,6 +241,7 @@ fun WeatherAlarmApp(
                                 id = alarmUiState.id,
                                 alarmTime = "$hourStr:$minuteStr",
                                 isAlarmOn = alarmUiState.isAlarmOn,
+                                isWeatherForecastOn = alarmUiState.isWeatherForecastOn,
                             ),
                         )
                     }

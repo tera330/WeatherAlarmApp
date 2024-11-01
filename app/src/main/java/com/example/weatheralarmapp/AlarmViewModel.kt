@@ -50,7 +50,7 @@ class AlarmViewModel(
     private val minutesStr = createMinuteString(currentTime.minute)
 
     private var _alarmUiState: MutableState<AlarmUiState> =
-        mutableStateOf(AlarmUiState(0, "$hourStr:$minutesStr", true))
+        mutableStateOf(AlarmUiState(0, "$hourStr:$minutesStr", true, false))
     val alarmUiState: State<AlarmUiState>
         get() = _alarmUiState
 
@@ -88,12 +88,12 @@ class AlarmViewModel(
         if (alarmItem.isAlarmOn) {
             setAlarm(
                 alarmManager,
-                AlarmItem(alarmItem.id, alarmItem.alarmTime, true),
+                AlarmItem(alarmItem.id, alarmItem.alarmTime, true, alarmItem.isWeatherForecastOn),
             )
         } else {
             cancelAlarm(
                 alarmManager,
-                AlarmItem(alarmItem.id, alarmItem.alarmTime, false),
+                AlarmItem(alarmItem.id, alarmItem.alarmTime, false, alarmItem.isWeatherForecastOn),
             )
         }
     }
@@ -203,7 +203,8 @@ class AlarmViewModel(
                     WeatherState.Success(
                         result.list
                             .last()
-                            .weather[0].description
+                            .weather[0]
+                            .description,
                     )
             } catch (e: Exception) {
                 Log.d("result", e.message.toString())
