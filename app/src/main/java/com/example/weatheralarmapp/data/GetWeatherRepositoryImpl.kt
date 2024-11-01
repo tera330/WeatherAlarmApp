@@ -1,7 +1,7 @@
 package com.example.weatheralarmapp.data
 
 import com.example.weatheralarmapp.model.CoordinateResponse
-import com.example.weatheralarmapp.model.WeatherResponse
+import com.example.weatheralarmapp.model.WeatherForecastResponse
 import com.example.weatheralarmapp.network.WeatherApiService
 import javax.inject.Inject
 
@@ -18,5 +18,6 @@ class GetWeatherRepositoryImpl
         override suspend fun getWeather(
             lat: Double,
             lon: Double,
-        ): WeatherResponse = weatherApiService.getWeather(lat, lon)
+            cnt: Int,
+        ): WeatherForecastResponse = weatherApiService.getWeather(lat, lon, cnt)
     }

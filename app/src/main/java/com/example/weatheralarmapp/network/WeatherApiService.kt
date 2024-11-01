@@ -2,7 +2,7 @@ package com.example.weatheralarmapp.network
 
 import com.example.weatheralarmapp.BuildConfig
 import com.example.weatheralarmapp.model.CoordinateResponse
-import com.example.weatheralarmapp.model.WeatherResponse
+import com.example.weatheralarmapp.model.WeatherForecastResponse
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -30,13 +30,14 @@ interface WeatherApiService {
         @Query("appid") apiKey: String = weatherApiKey,
     ): List<CoordinateResponse?>
 
-    @GET("data/2.5/weather?")
+    @GET("data/2.5/forecast?")
     suspend fun getWeather(
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
+        @Query("cnt") cnt: Int,
         @Query("lang") lang: String = "ja",
         @Query("appid") apiKey: String = weatherApiKey,
-    ): WeatherResponse
+    ): WeatherForecastResponse
 }
 
 object WeatherApi {
