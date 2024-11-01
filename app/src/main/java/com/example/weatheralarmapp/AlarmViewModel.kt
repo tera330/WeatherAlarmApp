@@ -6,6 +6,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.Calendar
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -66,6 +68,8 @@ class AlarmViewModel(
     private var _weatherState: MutableState<WeatherState> = mutableStateOf(WeatherState.Initial)
     val weatherState: State<WeatherState>
         get() = _weatherState
+
+    private val FIRST_FORECAST_TIME = 6
 
     suspend fun addAlarmItem(
         alarmManager: AlarmManager,
@@ -159,7 +163,10 @@ class AlarmViewModel(
         alarmManager.cancel(pendingIntent)
     }
 
-    fun getWeatherByCityName(cityName: String) {
+    fun getWeatherByCityName(
+        cityName: String,
+        alarmTime: LocalTime,
+    ) {
         viewModelScope.launch {
             _coordinateState.value = CoordinateState.Loading
             try {
@@ -168,7 +175,15 @@ class AlarmViewModel(
                         getWeatherRepositoryImpl.getCoordinate(cityName)
                     }
                 _coordinateState.value = CoordinateState.Success(result.lat, result.lon)
-                getWeatherByLocation(result.lat, result.lon)
+                // アラームの時間が現在時刻よりも前であれば次の日の時刻とする
+                // 6時から3時間おきに天気情報を取得する
+                val cnt =
+                    if (alarmTime.hour < currentTime.hour) {
+                        (alarmTime.hour + 24 - FIRST_FORECAST_TIME) / 3 + 1
+                    } else {
+                        (alarmTime.hour - FIRST_FORECAST_TIME) / 3 + 1
+                    }
+                getWeatherByLocation(result.lat, result.lon, cnt)
             } catch (e: Exception) {
                 _coordinateState.value = CoordinateState.Error(e.message ?: "Unknown error")
             }
@@ -178,13 +193,20 @@ class AlarmViewModel(
     private fun getWeatherByLocation(
         lat: Double,
         lon: Double,
+        cnt: Int,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             _weatherState.value = WeatherState.Loading
             try {
-                val result = getWeatherRepositoryImpl.getWeather(lat, lon)
-                _weatherState.value = WeatherState.Success(result.weather[0].description)
+                val result = getWeatherRepositoryImpl.getWeather(lat, lon, cnt)
+                _weatherState.value =
+                    WeatherState.Success(
+                        result.list
+                            .last()
+                            .weather[0].description
+                    )
             } catch (e: Exception) {
+                Log.d("result", e.message.toString())
                 _weatherState.value = WeatherState.Error(e.message ?: "Unknown error")
             }
         }
