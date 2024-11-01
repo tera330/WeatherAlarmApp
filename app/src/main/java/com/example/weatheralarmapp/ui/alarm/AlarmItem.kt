@@ -18,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.weatheralarmapp.R
+import com.example.weatheralarmapp.WeatherState
 import com.example.weatheralarmapp.dateformat.createHourString
 import com.example.weatheralarmapp.dateformat.createMinuteString
 import com.example.weatheralarmapp.ui.common.ExpandButton
@@ -49,10 +51,12 @@ import kotlin.concurrent.timer
 fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
+    weatherState: WeatherState,
     onSwitchAlarm: (Boolean) -> Unit,
     onSwitchWeatherForecast: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
     onDeleteAlarm: () -> Unit,
+    fetchWeather: () -> Unit,
     alarmManager: AlarmManager,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -69,6 +73,8 @@ fun AlarmItem(
     var duration by remember {
         mutableStateOf(Duration.ZERO)
     }
+    val radioOptions = listOf("15", "30", "45", "60")
+    val selectedOption = remember { mutableStateOf("15") }
 
     Card(modifier = modifier.padding(5.dp)) {
         Column(
@@ -122,8 +128,12 @@ fun AlarmItem(
                                 LocalTime.parse("0${alarmUiState.alarmTime}")
                             }
 
+                        LaunchedEffect(Unit) {
+                            fetchWeather()
+                        }
+
                         // アラームの設定時間と現在時刻の差分を計算
-                        LaunchedEffect(currentTime, alarmUiState.alarmTime) {
+                        LaunchedEffect(currentTime, alarmUiState.alarmTime, selectedOption.value, weatherState) {
                             duration =
                                 if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
                                     Duration.between(currentTime, alarmTime)
@@ -132,8 +142,32 @@ fun AlarmItem(
                                         Duration.between(currentTime, LocalTime.MIDNIGHT)
                                     val durationAfterMidnight =
                                         Duration.between(LocalTime.MIDNIGHT, alarmTime)
-                                    durationUntilMidnight.plus(durationAfterMidnight + Duration.ofDays(1))
+                                    durationUntilMidnight.plus(
+                                        durationAfterMidnight +
+                                            Duration.ofDays(
+                                                1,
+                                            ),
+                                    )
                                 }
+                            if (alarmUiState.isWeatherForecastOn) {
+                                if (weatherState is WeatherState.Success) {
+                                    when (weatherState.weather) {
+                                        "曇りがち" -> {
+                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                        }
+
+                                        "適度な雨" -> {
+                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                        }
+
+                                        "雪" -> {
+                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                        }
+                                        else -> {}
+                                    }
+                                }
+                            }
+
                             if (duration.toMinutes() >= 60) {
                                 hour = duration.toMinutes() / 60
                                 minute = duration.toMinutes() % 60
@@ -157,15 +191,28 @@ fun AlarmItem(
 
             TextSwitchRow(
                 modifier = modifier,
-                text = "天気予報機能",
+                text = "雨雪時に、選択した時間分アラームを早める",
                 isChecked = alarmUiState.isWeatherForecastOn,
-                onSwitch = { onSwitchWeatherForecast(it) },
+                onSwitch = {
+                    onSwitchWeatherForecast(it)
+                    // TODO 天気取得メソッドの呼び出し
+                    fetchWeather()
+                },
             )
 
             RequestExactAlarmPermission(openDialog = openDialog)
 
             if (expanded) {
                 Column(modifier = modifier) {
+                    RadioButtonGroup(
+                        modifier = modifier,
+                        radioOptions = radioOptions,
+                        selectedOption = selectedOption.value,
+                        onOptionSelected = { String ->
+                            selectedOption.value = String
+                        },
+                    )
+
                     IconButton(onClick = {
                         onDeleteAlarm()
                     }) {
@@ -175,7 +222,6 @@ fun AlarmItem(
                         )
                     }
                 }
-                // TODO 詳細を追加
             }
         }
     }
@@ -191,6 +237,48 @@ fun AlarmItem(
             alarmUiState = alarmUiState,
         )
     }
+}
+
+@Composable
+fun RadioButtonGroup(
+    modifier: Modifier,
+    radioOptions: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+) {
+    Row(modifier = modifier) {
+        radioOptions.forEach { text ->
+            Row(modifier) {
+                Column(
+                    modifier = modifier,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    RadioButton(
+                        selected = text == selectedOption,
+                        onClick = {
+                            onOptionSelected(text)
+                        },
+                    )
+                    Text(
+                        text = "${text}分",
+                        fontSize = 15.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun RadioButtonGroupPreview() {
+    val selectedOption = remember { mutableStateOf("15") }
+    RadioButtonGroup(
+        modifier = Modifier,
+        radioOptions = listOf("15", "30", "45", "60"),
+        selectedOption = selectedOption.value,
+        onOptionSelected = { String -> selectedOption.value = String },
+    )
 }
 
 @Composable
@@ -236,10 +324,12 @@ fun AlarmItemPreview() {
     AlarmItem(
         modifier = Modifier,
         alarmUiState = AlarmUiState(0, "", false, false),
+        weatherState = WeatherState.Initial,
         onSwitchAlarm = { Boolean -> },
         onSwitchWeatherForecast = { Boolean -> },
         selectTime = { String -> },
         onDeleteAlarm = { },
+        fetchWeather = { },
         alarmManager = alarmManager,
     )
 }

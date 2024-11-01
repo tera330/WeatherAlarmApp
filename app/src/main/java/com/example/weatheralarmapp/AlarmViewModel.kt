@@ -175,6 +175,7 @@ class AlarmViewModel(
                         getWeatherRepositoryImpl.getCoordinate(cityName)
                     }
                 _coordinateState.value = CoordinateState.Success(result.lat, result.lon)
+                // TODO 取得開始時刻が不安定のため調査必要。それに応じてcntの計算を修正。
                 // アラームの時間が現在時刻よりも前であれば次の日の時刻とする
                 // 6時から3時間おきに天気情報を取得する
                 val cnt =

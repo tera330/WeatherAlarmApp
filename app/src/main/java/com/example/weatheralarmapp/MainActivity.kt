@@ -56,6 +56,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -159,6 +160,7 @@ fun WeatherAlarmApp(
                                     isWeatherForecastOn = item.isWeatherForecastOn,
                                     alarmTime = item.alarmTime,
                                 ),
+                            weatherState = alarmViewModel.weatherState.value,
                             onSwitchAlarm = { Boolean ->
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
@@ -210,6 +212,9 @@ fun WeatherAlarmApp(
                                         alarmViewModel.deleteAlarmItem(item, alarmManager)
                                     }
                                 }
+                            },
+                            fetchWeather = {
+                                alarmViewModel.getWeatherByCityName("Tokyo", LocalTime.parse(item.alarmTime))
                             },
                             alarmManager = alarmManager,
                         )
