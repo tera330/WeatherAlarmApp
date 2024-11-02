@@ -11,7 +11,7 @@ import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-private const val weatherApiKey = BuildConfig.weather_apiKey
+private const val weatherApiKey = BuildConfig.WEATHER_API_KEY
 private const val BASE_URL = "https://api.openweathermap.org/"
 
 @OptIn(ExperimentalSerializationApi::class)
