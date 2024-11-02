@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Application
 import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Intent
 import android.os.Build
 import android.util.Log
@@ -50,7 +51,7 @@ class AlarmViewModel(
     private val minutesStr = createMinuteString(currentTime.minute)
 
     private var _alarmUiState: MutableState<AlarmUiState> =
-        mutableStateOf(AlarmUiState(0, "$hourStr:$minutesStr", true, false))
+        mutableStateOf(AlarmUiState(0, "$hourStr:$minutesStr", "00:00", "$hourStr:$minutesStr", true, false))
     val alarmUiState: State<AlarmUiState>
         get() = _alarmUiState
 
@@ -76,24 +77,57 @@ class AlarmViewModel(
         alarmItem: AlarmItem,
     ) {
         alarmItemRepository.insertAlarmItem(alarmItem)
-        setAlarm(alarmManager, alarmItem)
+        setAlarm(alarmManager, alarmItem, false)
     }
 
     suspend fun updateAlarmItem(
         alarmManager: AlarmManager,
         alarmItem: AlarmItem,
+        isBadWeather: Boolean,
     ) {
         alarmItemRepository.updateAlarmItem(alarmItem)
 
-        if (alarmItem.isAlarmOn) {
+        // アラームをオンにした時
+        if (alarmItem.isAlarmOn && !alarmItem.isWeatherForecastOn) {
+            val changedAlarmByWeather = alarmItem.alarmTime
             setAlarm(
                 alarmManager,
-                AlarmItem(alarmItem.id, alarmItem.alarmTime, true, alarmItem.isWeatherForecastOn),
+                AlarmItem(
+                    alarmItem.id,
+                    alarmItem.alarmTime,
+                    changedAlarmByWeather,
+                    "0",
+                    true,
+                    alarmItem.isWeatherForecastOn,
+                ),
+                isBadWeather,
             )
+            // 天気予報をオンにした時
+        } else if (alarmItem.isAlarmOn && alarmItem.isWeatherForecastOn) {
+            setAlarm(
+                alarmManager,
+                AlarmItem(
+                    alarmItem.id,
+                    alarmItem.alarmTime,
+                    alarmItem.changedAlarmTImeByWeather,
+                    "0",
+                    true,
+                    alarmItem.isWeatherForecastOn,
+                ),
+                isBadWeather,
+            )
+            // アラームをオフにした時
         } else {
             cancelAlarm(
                 alarmManager,
-                AlarmItem(alarmItem.id, alarmItem.alarmTime, false, alarmItem.isWeatherForecastOn),
+                AlarmItem(
+                    alarmItem.id,
+                    alarmItem.alarmTime,
+                    alarmItem.changedAlarmTImeByWeather,
+                    "0",
+                    false,
+                    alarmItem.isWeatherForecastOn,
+                ),
             )
         }
     }
@@ -112,6 +146,7 @@ class AlarmViewModel(
     private fun setAlarm(
         alarmManager: AlarmManager,
         alarmItem: AlarmItem,
+        isBadWeather: Boolean,
     ) {
         val intent =
             Intent(context, AlarmReceiver::class.java).apply {
@@ -122,15 +157,37 @@ class AlarmViewModel(
                 context,
                 alarmItem.id,
                 intent,
-                PendingIntent.FLAG_IMMUTABLE,
+                PendingIntent.FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT,
             )
         val calendar: Calendar =
-            Calendar.getInstance().apply {
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.HOUR_OF_DAY, alarmItem.alarmTime.substringBefore(":").toInt())
-                set(Calendar.MINUTE, alarmItem.alarmTime.substringAfter(":").toInt())
-                set(Calendar.SECOND, 0)
+            if (isBadWeather) {
+                Calendar.getInstance().apply {
+                    timeInMillis = System.currentTimeMillis()
+                    set(
+                        Calendar.HOUR_OF_DAY,
+                        alarmItem.changedAlarmTImeByWeather.substringBefore(":").toInt(),
+                    )
+                    set(
+                        Calendar.MINUTE,
+                        alarmItem.changedAlarmTImeByWeather.substringAfter(":").toInt(),
+                    )
+                    set(Calendar.SECOND, 0)
+                }
+            } else {
+                Calendar.getInstance().apply {
+                    timeInMillis = System.currentTimeMillis()
+                    set(
+                        Calendar.HOUR_OF_DAY,
+                        alarmItem.alarmTime.substringBefore(":").toInt(),
+                    )
+                    set(
+                        Calendar.MINUTE,
+                        alarmItem.alarmTime.substringAfter(":").toInt(),
+                    )
+                    set(Calendar.SECOND, 0)
+                }
             }
+
         if (calendar.timeInMillis >= System.currentTimeMillis()) {
             alarmManager.setAlarmClock(
                 AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
@@ -158,7 +215,7 @@ class AlarmViewModel(
                 context,
                 alarmItem.id,
                 intent,
-                PendingIntent.FLAG_IMMUTABLE,
+                PendingIntent.FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT,
             )
         alarmManager.cancel(pendingIntent)
     }

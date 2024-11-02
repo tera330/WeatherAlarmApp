@@ -55,6 +55,8 @@ fun AlarmItem(
     onSwitchAlarm: (Boolean) -> Unit,
     onSwitchWeatherForecast: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
+    selectRadioButton: (String) -> Unit,
+    isBadWeather: (Boolean) -> Unit,
     onDeleteAlarm: () -> Unit,
     fetchWeather: () -> Unit,
     alarmManager: AlarmManager,
@@ -74,7 +76,6 @@ fun AlarmItem(
         mutableStateOf(Duration.ZERO)
     }
     val radioOptions = listOf("15", "30", "45", "60")
-    val selectedOption = remember { mutableStateOf("15") }
 
     Card(modifier = modifier.padding(5.dp)) {
         Column(
@@ -99,6 +100,11 @@ fun AlarmItem(
                     text = alarmUiState.alarmTime,
                     fontSize = 40.sp,
                 )
+                Text(
+                    text = " -> ${alarmUiState.changedAlarmTImeByWeather}",
+                    fontSize = 40.sp,
+                )
+
                 Spacer(modifier = modifier.weight(1f))
                 ExpandButton(
                     modifier = modifier,
@@ -133,7 +139,7 @@ fun AlarmItem(
                         }
 
                         // アラームの設定時間と現在時刻の差分を計算
-                        LaunchedEffect(currentTime, alarmUiState.alarmTime, selectedOption.value, weatherState) {
+                        LaunchedEffect(currentTime, alarmUiState.alarmTime, alarmUiState.selectedEarlyAlarmTime, weatherState) {
                             duration =
                                 if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
                                     Duration.between(currentTime, alarmTime)
@@ -152,18 +158,32 @@ fun AlarmItem(
                             if (alarmUiState.isWeatherForecastOn) {
                                 if (weatherState is WeatherState.Success) {
                                     when (weatherState.weather) {
-                                        "曇りがち" -> {
-                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                        "小雨" -> {
+                                            if (duration.toMinutes() >= alarmUiState.selectedEarlyAlarmTime.toLong()) {
+                                                duration =
+                                                    duration.minus(Duration.ofMinutes(alarmUiState.selectedEarlyAlarmTime.toLong()))
+                                            }
+                                            isBadWeather(true)
                                         }
 
                                         "適度な雨" -> {
-                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                            if (duration.toMinutes() >= alarmUiState.selectedEarlyAlarmTime.toLong()) {
+                                                duration =
+                                                    duration.minus(Duration.ofMinutes(alarmUiState.selectedEarlyAlarmTime.toLong()))
+                                            }
+                                            isBadWeather(true)
                                         }
 
                                         "雪" -> {
-                                            duration = duration.minus(Duration.ofMinutes(selectedOption.value.toLong()))
+                                            if (duration.toMinutes() >= alarmUiState.selectedEarlyAlarmTime.toLong()) {
+                                                duration =
+                                                    duration.minus(Duration.ofMinutes(alarmUiState.selectedEarlyAlarmTime.toLong()))
+                                            }
+                                            isBadWeather(true)
                                         }
-                                        else -> {}
+                                        else -> {
+                                            isBadWeather(false)
+                                        }
                                     }
                                 }
                             }
@@ -195,8 +215,9 @@ fun AlarmItem(
                 isChecked = alarmUiState.isWeatherForecastOn,
                 onSwitch = {
                     onSwitchWeatherForecast(it)
-                    // TODO 天気取得メソッドの呼び出し
-                    fetchWeather()
+                    if (alarmUiState.isWeatherForecastOn) {
+                        fetchWeather()
+                    }
                 },
             )
 
@@ -207,9 +228,13 @@ fun AlarmItem(
                     RadioButtonGroup(
                         modifier = modifier,
                         radioOptions = radioOptions,
-                        selectedOption = selectedOption.value,
+                        selectedOption = alarmUiState.selectedEarlyAlarmTime.substringAfter(":"),
                         onOptionSelected = { String ->
-                            selectedOption.value = String
+                            if (!alarmUiState.isWeatherForecastOn) {
+                                selectRadioButton("00:00")
+                            } else {
+                                selectRadioButton("00:$String")
+                            }
                         },
                     )
 
@@ -277,7 +302,9 @@ fun RadioButtonGroupPreview() {
         modifier = Modifier,
         radioOptions = listOf("15", "30", "45", "60"),
         selectedOption = selectedOption.value,
-        onOptionSelected = { String -> selectedOption.value = String },
+        onOptionSelected = { String ->
+            selectedOption.value = String
+        },
     )
 }
 
@@ -323,11 +350,13 @@ fun AlarmItemPreview() {
 
     AlarmItem(
         modifier = Modifier,
-        alarmUiState = AlarmUiState(0, "", false, false),
+        alarmUiState = AlarmUiState(0, "", "00:00", "", false, false),
         weatherState = WeatherState.Initial,
         onSwitchAlarm = { Boolean -> },
         onSwitchWeatherForecast = { Boolean -> },
+        isBadWeather = { Boolean -> },
         selectTime = { String -> },
+        selectRadioButton = { String -> },
         onDeleteAlarm = { },
         fetchWeather = { },
         alarmManager = alarmManager,

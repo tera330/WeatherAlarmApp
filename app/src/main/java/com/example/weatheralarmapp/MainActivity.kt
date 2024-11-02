@@ -134,6 +134,7 @@ fun WeatherAlarmApp(
 ) {
     val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
     val scope = rememberCoroutineScope()
+    val isBadWeather = remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
@@ -157,8 +158,10 @@ fun WeatherAlarmApp(
                                 AlarmUiState(
                                     id = item.id,
                                     isAlarmOn = item.isAlarmOn,
+                                    selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
                                     isWeatherForecastOn = item.isWeatherForecastOn,
                                     alarmTime = item.alarmTime,
+                                    changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                 ),
                             weatherState = alarmViewModel.weatherState.value,
                             onSwitchAlarm = { Boolean ->
@@ -169,9 +172,12 @@ fun WeatherAlarmApp(
                                             AlarmItem(
                                                 id = item.id,
                                                 alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                                 isAlarmOn = Boolean,
                                                 isWeatherForecastOn = item.isWeatherForecastOn,
                                             ),
+                                            isBadWeather.value,
                                         )
                                     }
                                 }
@@ -184,12 +190,18 @@ fun WeatherAlarmApp(
                                             AlarmItem(
                                                 id = item.id,
                                                 alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                                 isAlarmOn = item.isAlarmOn,
                                                 isWeatherForecastOn = Boolean,
                                             ),
+                                            isBadWeather.value,
                                         )
                                     }
                                 }
+                            },
+                            isBadWeather = { Boolean ->
+                                isBadWeather.value = Boolean
                             },
                             selectTime = { String ->
                                 scope.launch {
@@ -199,9 +211,40 @@ fun WeatherAlarmApp(
                                             AlarmItem(
                                                 id = item.id,
                                                 alarmTime = String,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = String,
                                                 isAlarmOn = item.isAlarmOn,
                                                 isWeatherForecastOn = item.isWeatherForecastOn,
                                             ),
+                                            isBadWeather.value,
+                                        )
+                                    }
+                                }
+                            },
+                            selectRadioButton = { String ->
+                                val baseTime = LocalTime.parse(item.alarmTime)
+                                val changedAlarmTImeByWeather =
+                                    when (String) {
+                                        "00:00" -> item.alarmTime
+                                        "00:15" -> baseTime.minusMinutes(15).toString()
+                                        "00:30" -> baseTime.minusMinutes(30).toString()
+                                        "00:45" -> baseTime.minusMinutes(45).toString()
+                                        "00:60" -> baseTime.minusHours(1).toString()
+                                        else -> item.alarmTime
+                                    }
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = String,
+                                                changedAlarmTImeByWeather = changedAlarmTImeByWeather,
+                                                isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                            ),
+                                            isBadWeather.value,
                                         )
                                     }
                                 }
@@ -245,6 +288,8 @@ fun WeatherAlarmApp(
                             AlarmItem(
                                 id = alarmUiState.id,
                                 alarmTime = "$hourStr:$minuteStr",
+                                selectedEarlyAlarmTime = alarmUiState.selectedEarlyAlarmTime,
+                                changedAlarmTImeByWeather = "$hourStr:$minuteStr",
                                 isAlarmOn = alarmUiState.isAlarmOn,
                                 isWeatherForecastOn = alarmUiState.isWeatherForecastOn,
                             ),
