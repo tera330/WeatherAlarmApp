@@ -45,6 +45,8 @@ import com.example.weatheralarmapp.data.AlarmDatabase
 import com.example.weatheralarmapp.data.AlarmItem
 import com.example.weatheralarmapp.data.AlarmItemRepository
 import com.example.weatheralarmapp.data.AlarmItemRepositoryImpl
+import com.example.weatheralarmapp.data.GetWeatherRepositoryImpl
+import com.example.weatheralarmapp.network.WeatherApi
 import com.example.weatheralarmapp.ui.alarm.AlarmItem
 import com.example.weatheralarmapp.ui.alarm.AlarmUiState
 import com.example.weatheralarmapp.ui.alarm.ToggleTimePicker
@@ -54,11 +56,14 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalTime
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var alarmItemRepository: AlarmItemRepository
+
+    @Inject lateinit var getWeatherRepository: GetWeatherRepositoryImpl
 
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +103,7 @@ class MainActivity : ComponentActivity() {
                             showTimePicker = Boolean
                         },
                         alarmItemRepository = alarmItemRepository,
+                        getWeatherRepository = getWeatherRepository,
                     )
                 }
             }
@@ -112,11 +118,13 @@ fun WeatherAlarmApp(
     modifier: Modifier,
     context: Application = LocalContext.current.applicationContext as Application,
     alarmItemRepository: AlarmItemRepository,
+    getWeatherRepository: GetWeatherRepositoryImpl,
     alarmViewModel: AlarmViewModel =
         viewModel {
             AlarmViewModel(
                 context.applicationContext as Application,
                 alarmItemRepository,
+                getWeatherRepository,
             )
         },
     showTimePicker: Boolean,
@@ -126,6 +134,7 @@ fun WeatherAlarmApp(
 ) {
     val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
     val scope = rememberCoroutineScope()
+    val isBadWeather = remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
@@ -149,8 +158,12 @@ fun WeatherAlarmApp(
                                 AlarmUiState(
                                     id = item.id,
                                     isAlarmOn = item.isAlarmOn,
+                                    selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                    isWeatherForecastOn = item.isWeatherForecastOn,
                                     alarmTime = item.alarmTime,
+                                    changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                 ),
+                            weatherState = alarmViewModel.weatherState.value,
                             onSwitchAlarm = { Boolean ->
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
@@ -159,11 +172,36 @@ fun WeatherAlarmApp(
                                             AlarmItem(
                                                 id = item.id,
                                                 alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                                 isAlarmOn = Boolean,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
                                             ),
+                                            isBadWeather.value,
                                         )
                                     }
                                 }
+                            },
+                            onSwitchWeatherForecast = { Boolean ->
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
+                                                isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = Boolean,
+                                            ),
+                                            isBadWeather.value,
+                                        )
+                                    }
+                                }
+                            },
+                            isBadWeather = { Boolean ->
+                                isBadWeather.value = Boolean
                             },
                             selectTime = { String ->
                                 scope.launch {
@@ -173,8 +211,40 @@ fun WeatherAlarmApp(
                                             AlarmItem(
                                                 id = item.id,
                                                 alarmTime = String,
+                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = String,
                                                 isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
                                             ),
+                                            isBadWeather.value,
+                                        )
+                                    }
+                                }
+                            },
+                            selectRadioButton = { String ->
+                                val baseTime = LocalTime.parse(item.alarmTime)
+                                val changedAlarmTImeByWeather =
+                                    when (String) {
+                                        "00:00" -> item.alarmTime
+                                        "00:15" -> baseTime.minusMinutes(15).toString()
+                                        "00:30" -> baseTime.minusMinutes(30).toString()
+                                        "00:45" -> baseTime.minusMinutes(45).toString()
+                                        "00:60" -> baseTime.minusHours(1).toString()
+                                        else -> item.alarmTime
+                                    }
+                                scope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        alarmViewModel.updateAlarmItem(
+                                            alarmManager,
+                                            AlarmItem(
+                                                id = item.id,
+                                                alarmTime = item.alarmTime,
+                                                selectedEarlyAlarmTime = String,
+                                                changedAlarmTImeByWeather = changedAlarmTImeByWeather,
+                                                isAlarmOn = item.isAlarmOn,
+                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                            ),
+                                            isBadWeather.value,
                                         )
                                     }
                                 }
@@ -185,6 +255,9 @@ fun WeatherAlarmApp(
                                         alarmViewModel.deleteAlarmItem(item, alarmManager)
                                     }
                                 }
+                            },
+                            fetchWeather = {
+                                alarmViewModel.getWeatherByCityName("Tokyo", LocalTime.parse(item.alarmTime))
                             },
                             alarmManager = alarmManager,
                         )
@@ -215,7 +288,10 @@ fun WeatherAlarmApp(
                             AlarmItem(
                                 id = alarmUiState.id,
                                 alarmTime = "$hourStr:$minuteStr",
+                                selectedEarlyAlarmTime = alarmUiState.selectedEarlyAlarmTime,
+                                changedAlarmTImeByWeather = "$hourStr:$minuteStr",
                                 isAlarmOn = alarmUiState.isAlarmOn,
+                                isWeatherForecastOn = alarmUiState.isWeatherForecastOn,
                             ),
                         )
                     }
@@ -236,10 +312,12 @@ fun WeatherAlarmAppPreview() {
     val alarmItemRepository: AlarmItemRepository by lazy {
         AlarmItemRepositoryImpl(AlarmDatabase.getDatabase(context).alarmItemDao())
     }
+    val weatherApiService = WeatherApi.retrofitService
 
     WeatherAlarmApp(
         modifier = Modifier.fillMaxSize(),
         alarmItemRepository = alarmItemRepository,
+        getWeatherRepository = GetWeatherRepositoryImpl(weatherApiService),
         showTimePicker = false,
         onShowTimePickerChange = { Boolean -> },
     )

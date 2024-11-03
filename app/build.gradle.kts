@@ -1,9 +1,30 @@
+import java.util.Properties
+
+val properties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+
+if (!localPropertiesFile.exists()) {
+    localPropertiesFile.createNewFile()
+
+    val mapsApiKey = System.getenv("WEATHER_API_KEY") ?: error("WEATHER_API_KEY is not set")
+    properties.setProperty("WEATHER_API_KEY", mapsApiKey)
+    localPropertiesFile.writer().use { writer ->
+        properties.store(writer, null)
+    }
+} else {
+    localPropertiesFile.inputStream().use { inputStream ->
+        properties.load(inputStream)
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.20"
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -41,6 +62,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -74,6 +96,10 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.retrofit)
+    implementation(libs.kotlinx.serialization.json)
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:0.8.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
