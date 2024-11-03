@@ -211,7 +211,7 @@ fun AlarmItem(
 
             TextSwitchRow(
                 modifier = modifier,
-                text = "雨雪時に、選択した時間分アラームを早める",
+                text = "雨雪時にアラームを早める",
                 isChecked = alarmUiState.isWeatherForecastOn,
                 onSwitch = {
                     onSwitchWeatherForecast(it)
