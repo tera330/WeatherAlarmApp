@@ -72,9 +72,7 @@ fun AlarmItem(
             remember { mutableStateOf(true) }
         }
     var secondsUntilNextMinute by remember { mutableIntStateOf(0) }
-    var duration by remember {
-        mutableStateOf(Duration.ZERO)
-    }
+    var duration by remember { mutableStateOf(Duration.ZERO) }
     val radioOptions = listOf("15", "30", "45", "60")
 
     Card(modifier = modifier.padding(5.dp)) {
@@ -91,27 +89,15 @@ fun AlarmItem(
                             ),
                     ),
         ) {
-            Row(modifier = modifier.fillMaxWidth()) {
-                Text(
-                    modifier =
-                        modifier.clickable {
-                            showTimePicker = !showTimePicker
-                        },
-                    text = alarmUiState.alarmTime,
-                    fontSize = 40.sp,
-                )
-                Text(
-                    text = " -> ${alarmUiState.changedAlarmTImeByWeather}",
-                    fontSize = 40.sp,
-                )
+            AlarmTimeRow(
+                modifier = modifier,
+                toggleShowTimePicker = { showTimePicker = !showTimePicker },
+                alarmText = alarmUiState.alarmTime,
+                changedAlarmText = alarmUiState.changedAlarmTImeByWeather,
+                expanded = expanded,
+                onExpandToggle = { expanded = !expanded },
+            )
 
-                Spacer(modifier = modifier.weight(1f))
-                ExpandButton(
-                    modifier = modifier,
-                    expanded = expanded,
-                    onClick = { expanded = !expanded },
-                )
-            }
             Spacer(modifier = Modifier.padding(5.dp))
             Row(
                 modifier = modifier.fillMaxWidth(),
@@ -260,6 +246,40 @@ fun AlarmItem(
             },
             onDismiss = { showTimePicker = false },
             alarmUiState = alarmUiState,
+        )
+    }
+}
+
+@Composable
+fun AlarmTimeRow(
+    modifier: Modifier,
+    toggleShowTimePicker: () -> Unit,
+    alarmText: String,
+    changedAlarmText: String,
+    expanded: Boolean,
+    onExpandToggle: () -> Unit,
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        Text(
+            modifier =
+                modifier.clickable {
+                    toggleShowTimePicker()
+                },
+            text = alarmText,
+            fontSize = 40.sp,
+        )
+        Text(
+            text = " -> $changedAlarmText",
+            fontSize = 40.sp,
+        )
+
+        Spacer(modifier = modifier.weight(1f))
+        ExpandButton(
+            modifier = modifier,
+            expanded = expanded,
+            onClick = {
+                onExpandToggle()
+            },
         )
     }
 }
