@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp
+package com.example.weatheralarmapp.ui.features.alarm
 
 import android.app.Application
 import android.os.Build
@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.sound.ExoPlayerManager
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 

@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.ui.alarm
+package com.example.weatheralarmapp.ui.features.alarm.components
 
 import android.content.Intent
 import android.os.Build

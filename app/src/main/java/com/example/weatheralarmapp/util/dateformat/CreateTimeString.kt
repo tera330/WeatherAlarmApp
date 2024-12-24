@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.dateformat
+package com.example.weatheralarmapp.util.dateformat
 
 fun createMinuteString(minute: Int): String =
     if (minute < 10) {

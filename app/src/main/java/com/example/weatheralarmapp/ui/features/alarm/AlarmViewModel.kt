@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp
+package com.example.weatheralarmapp.ui.features.alarm
 
 import android.annotation.SuppressLint
 import android.app.AlarmManager
@@ -12,15 +12,12 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.weatheralarmapp.data.AlarmItem
-import com.example.weatheralarmapp.data.AlarmItemRepository
-import com.example.weatheralarmapp.data.GetWeatherRepositoryImpl
-import com.example.weatheralarmapp.dateformat.createHourString
-import com.example.weatheralarmapp.dateformat.createMinuteString
+import com.example.weatheralarmapp.data.local.AlarmItem
+import com.example.weatheralarmapp.data.repository.AlarmItemRepository
+import com.example.weatheralarmapp.data.repository.GetWeatherRepositoryImpl
 import com.example.weatheralarmapp.receiver.AlarmReceiver
-import com.example.weatheralarmapp.ui.alarm.AlarmItemState
-import com.example.weatheralarmapp.ui.alarm.AlarmUiState
-import com.example.weatheralarmapp.ui.home.HomeUiState
+import com.example.weatheralarmapp.util.dateformat.createHourString
+import com.example.weatheralarmapp.util.dateformat.createMinuteString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

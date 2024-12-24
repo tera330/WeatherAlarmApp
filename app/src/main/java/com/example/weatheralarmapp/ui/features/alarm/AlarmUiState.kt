@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.ui.alarm
+package com.example.weatheralarmapp.ui.features.alarm
 
 // Roomが保持するデータ
 data class AlarmItemState(

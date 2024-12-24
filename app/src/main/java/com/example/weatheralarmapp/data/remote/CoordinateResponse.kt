@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.model
+package com.example.weatheralarmapp.data.remote
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

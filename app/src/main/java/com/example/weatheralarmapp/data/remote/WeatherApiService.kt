@@ -1,8 +1,6 @@
-package com.example.weatheralarmapp.network
+package com.example.weatheralarmapp.data.remote
 
 import com.example.weatheralarmapp.BuildConfig
-import com.example.weatheralarmapp.model.CoordinateResponse
-import com.example.weatheralarmapp.model.WeatherForecastResponse
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json

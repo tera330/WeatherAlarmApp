@@ -1,7 +1,7 @@
-package com.example.weatheralarmapp.data
+package com.example.weatheralarmapp.data.repository
 
-import com.example.weatheralarmapp.model.CoordinateResponse
-import com.example.weatheralarmapp.model.WeatherForecastResponse
+import com.example.weatheralarmapp.data.remote.CoordinateResponse
+import com.example.weatheralarmapp.data.remote.WeatherForecastResponse
 
 interface GetWeatherRepository {
     suspend fun getCoordinate(city: String): CoordinateResponse

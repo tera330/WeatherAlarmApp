@@ -1,5 +1,6 @@
-package com.example.weatheralarmapp.data
+package com.example.weatheralarmapp.data.repository
 
+import com.example.weatheralarmapp.data.local.AlarmItem
 import kotlinx.coroutines.flow.Flow
 
 interface AlarmItemRepository {

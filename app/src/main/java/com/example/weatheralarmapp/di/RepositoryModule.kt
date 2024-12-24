@@ -1,10 +1,10 @@
 package com.example.weatheralarmapp.di
 
 import android.content.Context
-import com.example.weatheralarmapp.data.AlarmDatabase
-import com.example.weatheralarmapp.data.AlarmItemDao
-import com.example.weatheralarmapp.data.AlarmItemRepository
-import com.example.weatheralarmapp.data.AlarmItemRepositoryImpl
+import com.example.weatheralarmapp.data.local.AlarmDatabase
+import com.example.weatheralarmapp.data.local.AlarmItemDao
+import com.example.weatheralarmapp.data.repository.AlarmItemRepository
+import com.example.weatheralarmapp.data.repository.AlarmItemRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

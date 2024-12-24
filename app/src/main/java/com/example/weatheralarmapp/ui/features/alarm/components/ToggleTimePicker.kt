@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.ui.alarm
+package com.example.weatheralarmapp.ui.features.alarm.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.weatheralarmapp.R
+import com.example.weatheralarmapp.ui.features.alarm.AlarmItemState
+import com.example.weatheralarmapp.ui.features.alarm.AlarmUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

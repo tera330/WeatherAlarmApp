@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.data
+package com.example.weatheralarmapp.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete

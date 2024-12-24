@@ -1,8 +1,8 @@
-package com.example.weatheralarmapp.data
+package com.example.weatheralarmapp.data.repository
 
-import com.example.weatheralarmapp.model.CoordinateResponse
-import com.example.weatheralarmapp.model.WeatherForecastResponse
-import com.example.weatheralarmapp.network.WeatherApiService
+import com.example.weatheralarmapp.data.remote.CoordinateResponse
+import com.example.weatheralarmapp.data.remote.WeatherApiService
+import com.example.weatheralarmapp.data.remote.WeatherForecastResponse
 import javax.inject.Inject
 
 class GetWeatherRepositoryImpl
