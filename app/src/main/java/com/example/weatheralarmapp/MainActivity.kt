@@ -2,12 +2,10 @@ package com.example.weatheralarmapp
 
 import android.app.AlarmManager
 import android.app.Application
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,7 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +45,9 @@ import com.example.weatheralarmapp.data.AlarmItemRepositoryImpl
 import com.example.weatheralarmapp.data.GetWeatherRepositoryImpl
 import com.example.weatheralarmapp.network.WeatherApi
 import com.example.weatheralarmapp.ui.alarm.AlarmItem
+import com.example.weatheralarmapp.ui.alarm.AlarmItemState
 import com.example.weatheralarmapp.ui.alarm.AlarmUiState
 import com.example.weatheralarmapp.ui.alarm.ToggleTimePicker
-import com.example.weatheralarmapp.ui.home.HomeUiState
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +62,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var getWeatherRepository: GetWeatherRepositoryImpl
 
-    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,7 +107,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherAlarmApp(
@@ -129,12 +124,18 @@ fun WeatherAlarmApp(
         },
     showTimePicker: Boolean,
     onShowTimePickerChange: (Boolean) -> Unit,
-    alarmUiState: AlarmUiState = alarmViewModel.alarmUiState.value,
-    homeUiState: State<HomeUiState> = alarmViewModel.homeUiState.collectAsState(),
 ) {
     val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
     val scope = rememberCoroutineScope()
     val isBadWeather = remember { mutableStateOf(false) }
+
+    val alarmUiStateFlow = alarmViewModel.alarmUiState
+    val alarmUiState = alarmUiStateFlow.collectAsState().value
+
+    val alarmItemState = alarmUiState.alarmItemState
+
+    val homeUiState by alarmViewModel.homeUiState.collectAsState()
+
     Column(
         modifier =
             modifier
@@ -143,27 +144,37 @@ fun WeatherAlarmApp(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        if (homeUiState.value.alarmItemList.isEmpty()) {
+        if (homeUiState.alarmItemList.isEmpty()) {
             Text(
                 text = stringResource(R.string.nothing_alarm),
                 fontSize = 20.sp,
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-                items(items = homeUiState.value.alarmItemList, key = { it.id }) { item ->
+                items(items = homeUiState.alarmItemList, key = { it.id }) { item ->
                     Column {
                         AlarmItem(
                             modifier = Modifier,
                             alarmUiState =
                                 AlarmUiState(
-                                    id = item.id,
-                                    isAlarmOn = item.isAlarmOn,
-                                    selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
-                                    isWeatherForecastOn = item.isWeatherForecastOn,
-                                    alarmTime = item.alarmTime,
-                                    changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
+                                    alarmItemState =
+                                        AlarmItemState(
+                                            id = item.id,
+                                            isAlarmOn = item.isAlarmOn,
+                                            selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                            isWeatherForecastOn = item.isWeatherForecastOn,
+                                            alarmTime = item.alarmTime,
+                                            changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
+                                        ),
+                                    expandedAlarmItem = alarmUiState.expandedAlarmItem,
+                                    hoursUntilAlarm = alarmUiState.hoursUntilAlarm,
+                                    minutesUntilAlarm = alarmUiState.minutesUntilAlarm,
                                 ),
                             weatherState = alarmViewModel.weatherState.value,
+                            expandedAlarmItem = { alarmViewModel.expandedAlarmItem() },
+                            updateUntilTime = { hours, minutes ->
+                                alarmViewModel.updateUntilAlarmTime(hours, minutes)
+                            },
                             onSwitchAlarm = { Boolean ->
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
@@ -286,12 +297,12 @@ fun WeatherAlarmApp(
                         alarmViewModel.addAlarmItem(
                             alarmManager = alarmManager,
                             AlarmItem(
-                                id = alarmUiState.id,
+                                id = alarmItemState.id,
                                 alarmTime = "$hourStr:$minuteStr",
-                                selectedEarlyAlarmTime = alarmUiState.selectedEarlyAlarmTime,
+                                selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
                                 changedAlarmTImeByWeather = "$hourStr:$minuteStr",
-                                isAlarmOn = alarmUiState.isAlarmOn,
-                                isWeatherForecastOn = alarmUiState.isWeatherForecastOn,
+                                isAlarmOn = alarmItemState.isAlarmOn,
+                                isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
                             ),
                         )
                     }
@@ -304,7 +315,6 @@ fun WeatherAlarmApp(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
 fun WeatherAlarmAppPreview() {

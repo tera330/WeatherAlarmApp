@@ -44,10 +44,11 @@ fun ToggleTimePicker(
     onDismiss: () -> Unit,
     alarmUiState: AlarmUiState,
 ) {
+    val alarmItemState = alarmUiState.alarmItemState
     val timePickerState =
         rememberTimePickerState(
-            initialHour = alarmUiState.alarmTime.substringBefore(":").toInt(),
-            initialMinute = alarmUiState.alarmTime.substringAfter(":").toInt(),
+            initialHour = alarmItemState.alarmTime.substringBefore(":").toInt(),
+            initialMinute = alarmItemState.alarmTime.substringAfter(":").toInt(),
             is24Hour = true,
         )
     var showDial by remember { mutableStateOf(true) }
@@ -144,6 +145,18 @@ private fun DialTimePickerPreview() {
     ToggleTimePicker(
         onConfirm = {},
         onDismiss = {},
-        alarmUiState = AlarmUiState(0, "8:00", "00:00", "", false, false),
+        alarmUiState =
+            AlarmUiState(
+                alarmItemState =
+                    AlarmItemState(
+                        id = 0,
+                        alarmTime = "07:00",
+                        selectedEarlyAlarmTime = "00:00",
+                        changedAlarmTImeByWeather = "07:00",
+                        isAlarmOn = true,
+                        isWeatherForecastOn = false,
+                    ),
+                expandedAlarmItem = false,
+            ),
     )
 }
