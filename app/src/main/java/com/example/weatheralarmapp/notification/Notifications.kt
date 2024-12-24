@@ -5,8 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.example.weatheralarmapp.AlarmActivity
 import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.dateformat.createHourString
@@ -14,7 +12,6 @@ import com.example.weatheralarmapp.dateformat.createMinuteString
 import com.example.weatheralarmapp.receiver.AlarmReceiver
 import java.time.LocalDateTime
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun sendAlarmNotification(
     context: Context,
     notificationManager: NotificationManager,
