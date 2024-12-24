@@ -97,10 +97,10 @@ fun WeatherAlarmScreen(
                                             changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
                                         ),
                                     expandedAlarmItem = alarmUiState.expandedAlarmItem,
+                                    weatherState = alarmUiState.weatherState,
                                     hoursUntilAlarm = alarmUiState.hoursUntilAlarm,
                                     minutesUntilAlarm = alarmUiState.minutesUntilAlarm,
                                 ),
-                            weatherState = alarmViewModel.weatherState.value,
                             expandedAlarmItem = { alarmViewModel.expandedAlarmItem() },
                             updateUntilTime = { hours, minutes ->
                                 alarmViewModel.updateUntilAlarmTime(hours, minutes)
@@ -198,7 +198,10 @@ fun WeatherAlarmScreen(
                                 }
                             },
                             fetchWeather = {
-                                alarmViewModel.getWeatherByCityName("Tokyo", LocalTime.parse(item.alarmTime))
+                                alarmViewModel.getWeatherByCityName(
+                                    "Tokyo",
+                                    LocalTime.parse(item.alarmTime),
+                                )
                             },
                             alarmManager = alarmManager,
                         )

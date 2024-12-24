@@ -3,7 +3,6 @@ package com.example.weatheralarmapp.ui.features.alarm.components
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
@@ -25,8 +24,6 @@ fun RequestExactAlarmPermission(
     openDialog: MutableState<Boolean>,
 ) {
     val context = LocalContext.current
-
-    Log.d("result", "aaaa")
 
     Column(
         modifier =

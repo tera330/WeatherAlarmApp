@@ -8,7 +8,6 @@ import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -58,6 +57,7 @@ class AlarmViewModel(
                         selectedEarlyAlarmTime = "00:00",
                         changedAlarmTImeByWeather = "$hourStr:$minutesStr",
                     ),
+                weatherState = WeatherState.Initial,
                 expandedAlarmItem = false,
                 hoursUntilAlarm = 0L,
                 minutesUntilAlarm = 0L,
@@ -77,9 +77,6 @@ class AlarmViewModel(
             )
 
     private var _coordinateState: MutableState<CoordinateState> = mutableStateOf(CoordinateState.Initial)
-    private var _weatherState: MutableState<WeatherState> = mutableStateOf(WeatherState.Initial)
-    val weatherState: State<WeatherState>
-        get() = _weatherState
 
     private val FIRST_FORECAST_TIME = 6
 
@@ -285,19 +282,31 @@ class AlarmViewModel(
         cnt: Int,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            _weatherState.value = WeatherState.Loading
+            _alarmUiState.update {
+                it.copy(
+                    weatherState = WeatherState.Loading,
+                )
+            }
             try {
                 val result = getWeatherRepositoryImpl.getWeather(lat, lon, cnt)
-                _weatherState.value =
-                    WeatherState.Success(
-                        result.list
-                            .last()
-                            .weather[0]
-                            .description,
+                _alarmUiState.update {
+                    it.copy(
+                        weatherState =
+                            WeatherState.Success(
+                                result.list
+                                    .last()
+                                    .weather[0]
+                                    .description,
+                            ),
                     )
+                }
             } catch (e: Exception) {
                 Log.d("result", e.message.toString())
-                _weatherState.value = WeatherState.Error(e.message ?: "Unknown error")
+                _alarmUiState.update {
+                    it.copy(
+                        weatherState = WeatherState.Error(e.message ?: "Unknown error"),
+                    )
+                }
             }
         }
     }
@@ -316,18 +325,4 @@ sealed interface CoordinateState {
     data class Error(
         val message: String,
     ) : CoordinateState
-}
-
-sealed interface WeatherState {
-    data object Initial : WeatherState
-
-    data object Loading : WeatherState
-
-    data class Success(
-        val weather: String,
-    ) : WeatherState
-
-    data class Error(
-        val message: String,
-    ) : WeatherState
 }

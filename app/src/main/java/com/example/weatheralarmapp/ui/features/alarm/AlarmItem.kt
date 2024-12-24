@@ -49,7 +49,6 @@ import kotlin.concurrent.timer
 fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
-    weatherState: WeatherState,
     expandedAlarmItem: () -> Unit,
     updateUntilTime: (Long, Long) -> Unit,
     onSwitchAlarm: (Boolean) -> Unit,
@@ -124,7 +123,12 @@ fun AlarmItem(
                         }
 
                         // アラームの設定時間と現在時刻の差分を計算
-                        LaunchedEffect(currentTime, alarmItemState.alarmTime, alarmItemState.selectedEarlyAlarmTime, weatherState) {
+                        LaunchedEffect(
+                            currentTime,
+                            alarmItemState.alarmTime,
+                            alarmItemState.selectedEarlyAlarmTime,
+                            alarmUiState.weatherState,
+                        ) {
                             duration =
                                 if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
                                     Duration.between(currentTime, alarmTime)
@@ -141,8 +145,8 @@ fun AlarmItem(
                                     )
                                 }
                             if (alarmItemState.isWeatherForecastOn) {
-                                if (weatherState is WeatherState.Success) {
-                                    when (weatherState.weather) {
+                                if (alarmUiState.weatherState is WeatherState.Success) {
+                                    when (alarmUiState.weatherState.weather) {
                                         "小雨" -> {
                                             if (duration.toMinutes() >= alarmItemState.selectedEarlyAlarmTime.toLong()) {
                                                 duration =
@@ -390,8 +394,8 @@ fun AlarmItemPreview() {
                         isWeatherForecastOn = false,
                     ),
                 expandedAlarmItem = false,
+                weatherState = WeatherState.Initial,
             ),
-        weatherState = WeatherState.Initial,
         expandedAlarmItem = { },
         updateUntilTime = { hours, minutes -> },
         onSwitchAlarm = { Boolean -> },
