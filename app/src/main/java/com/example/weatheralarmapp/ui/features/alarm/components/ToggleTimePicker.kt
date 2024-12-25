@@ -38,6 +38,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.ui.features.alarm.AlarmItemState
 import com.example.weatheralarmapp.ui.features.alarm.AlarmUiState
+import com.example.weatheralarmapp.ui.features.alarm.CoordinateState
 import com.example.weatheralarmapp.ui.features.alarm.WeatherState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,6 +162,7 @@ private fun DialTimePickerPreview() {
                     ),
                 expandedAlarmItem = false,
                 weatherState = WeatherState.Initial,
+                coordinateState = CoordinateState.Initial,
             ),
     )
 }
