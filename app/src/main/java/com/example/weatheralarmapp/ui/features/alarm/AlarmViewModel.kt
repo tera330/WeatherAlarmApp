@@ -7,9 +7,6 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.content.Intent
 import android.util.Log
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.weatheralarmapp.data.local.AlarmItem
@@ -20,11 +17,9 @@ import com.example.weatheralarmapp.util.dateformat.createHourString
 import com.example.weatheralarmapp.util.dateformat.createMinuteString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,10 +32,6 @@ class AlarmViewModel(
     private val alarmItemRepository: AlarmItemRepository,
     private val getWeatherRepositoryImpl: GetWeatherRepositoryImpl,
 ) : AndroidViewModel(application) {
-    companion object {
-        private const val TIMEOUT_MILLIS = 5_000L
-    }
-
     @SuppressLint("StaticFieldLeak")
     private val context = application.applicationContext
 
@@ -58,6 +49,8 @@ class AlarmViewModel(
                         selectedEarlyAlarmTime = "00:00",
                         changedAlarmTImeByWeather = "$hourStr:$minutesStr",
                     ),
+                weatherState = WeatherState.Initial,
+                coordinateState = CoordinateState.Initial,
                 expandedAlarmItem = false,
                 hoursUntilAlarm = 0L,
                 minutesUntilAlarm = 0L,
@@ -66,39 +59,93 @@ class AlarmViewModel(
     val alarmUiState: StateFlow<AlarmUiState>
         get() = _alarmUiState.asStateFlow()
 
-    val homeUiState: StateFlow<HomeUiState> =
-        alarmItemRepository
-            .getAllAlarmItemsStream()
-            .map { HomeUiState(it) }
-            .stateIn(
-                viewModelScope,
-                started = SharingStarted.WhileSubscribed(TIMEOUT_MILLIS),
-                initialValue = HomeUiState(),
-            )
+    private var _homeUiState: MutableStateFlow<HomeUiState> = MutableStateFlow(HomeUiState())
+    val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
 
-    private var _coordinateState: MutableState<CoordinateState> = mutableStateOf(CoordinateState.Initial)
-    private var _weatherState: MutableState<WeatherState> = mutableStateOf(WeatherState.Initial)
-    val weatherState: State<WeatherState>
-        get() = _weatherState
+    init {
+        viewModelScope.launch {
+            // リポジトリからのフローを収集して _homeUiState を更新
+            alarmItemRepository
+                .getAllAlarmItemsStream()
+                .map { alarmItems ->
+                    // リポジトリから受け取ったデータを HomeUiState に変換
+                    HomeUiState(
+                        alarmItemList =
+                            alarmItems.map { alarmItem ->
+                                AlarmUiState(
+                                    alarmItemState =
+                                        AlarmItemState(
+                                            id = alarmItem.id,
+                                            alarmTime = alarmItem.alarmTime,
+                                            selectedEarlyAlarmTime = alarmItem.selectedEarlyAlarmTime,
+                                            changedAlarmTImeByWeather = alarmItem.changedAlarmTImeByWeather,
+                                            isAlarmOn = alarmItem.isAlarmOn,
+                                            isWeatherForecastOn = alarmItem.isWeatherForecastOn,
+                                        ),
+                                )
+                            },
+                    )
+                }.collect { updatedHomeUiState ->
+                    _homeUiState.value = updatedHomeUiState
+                }
+        }
+    }
 
     private val FIRST_FORECAST_TIME = 6
 
     fun expandedAlarmItem() {
-        _alarmUiState.update { currentState ->
-            currentState.copy(
-                expandedAlarmItem = !currentState.expandedAlarmItem,
+        _homeUiState.update {
+            it.copy(
+                alarmItemList =
+                    it.alarmItemList.map { alarmUiState ->
+                        alarmUiState.copy(
+                            expandedAlarmItem = !alarmUiState.expandedAlarmItem,
+                        )
+                    },
             )
         }
     }
 
     fun updateUntilAlarmTime(
+        id: Int,
         hoursUntilAlarm: Long,
         minutesUntilAlarm: Long,
     ) {
-        _alarmUiState.update { currentState ->
-            currentState.copy(
-                hoursUntilAlarm = hoursUntilAlarm,
-                minutesUntilAlarm = minutesUntilAlarm,
+        _homeUiState.update {
+            it.copy(
+                alarmItemList =
+                    it.alarmItemList.map { alarmUiState ->
+                        if (alarmUiState.alarmItemState.id == id) {
+                            alarmUiState.copy(
+                                hoursUntilAlarm = hoursUntilAlarm,
+                                minutesUntilAlarm = minutesUntilAlarm,
+                            )
+                        } else {
+                            alarmUiState
+                        }
+                    },
+            )
+        }
+    }
+
+    fun updateUntilAlarmTimeByWeather(
+        id: Int,
+        earlyHoursUntilAlarm: Long,
+        earlyMinutesUntilAlarm: Long,
+    ) {
+        _homeUiState.update {
+            it.copy(
+                alarmItemList =
+                    it.alarmItemList.map { alarmUiState ->
+                        if (alarmUiState.alarmItemState.id == id) {
+                            alarmUiState.copy(
+                                earlyHoursUntilAlarmByWeather = earlyHoursUntilAlarm,
+                                earlyMinutesUntilAlarmByWeather = earlyMinutesUntilAlarm,
+                            )
+                        } else {
+                            alarmUiState
+                        }
+                    },
             )
         }
     }
@@ -164,15 +211,27 @@ class AlarmViewModel(
     }
 
     suspend fun deleteAlarmItem(
-        alarmItem: AlarmItem,
+        alarmUiState: AlarmUiState,
         alarmManager: AlarmManager,
     ) {
+        val alarmItem = alarmUiState.alarmItemState.toAlarmItem(alarmUiState.alarmItemState)
+
         cancelAlarm(
             alarmManager,
             alarmItem,
         )
         alarmItemRepository.deleteAlarmItem(alarmItem)
     }
+
+    private fun AlarmItemState.toAlarmItem(alarmItemState: AlarmItemState): AlarmItem =
+        AlarmItem(
+            id = alarmItemState.id,
+            alarmTime = alarmItemState.alarmTime,
+            changedAlarmTImeByWeather = alarmItemState.changedAlarmTImeByWeather,
+            selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
+            isAlarmOn = alarmItemState.isAlarmOn,
+            isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
+        )
 
     private fun setAlarm(
         alarmManager: AlarmManager,
@@ -252,17 +311,26 @@ class AlarmViewModel(
     }
 
     fun getWeatherByCityName(
+        id: Int,
         cityName: String,
         alarmTime: LocalTime,
     ) {
         viewModelScope.launch {
-            _coordinateState.value = CoordinateState.Loading
+            updateAlarmUiState(id) {
+                it.copy(
+                    coordinateState = CoordinateState.Loading,
+                )
+            }
             try {
                 val result =
                     withContext(Dispatchers.IO) {
                         getWeatherRepositoryImpl.getCoordinate(cityName)
                     }
-                _coordinateState.value = CoordinateState.Success(result.lat, result.lon)
+                updateAlarmUiState(id) {
+                    it.copy(
+                        coordinateState = CoordinateState.Success(result.lat, result.lon),
+                    )
+                }
                 // TODO 取得開始時刻が不安定のため調査必要。それに応じてcntの計算を修正。
                 // アラームの時間が現在時刻よりも前であれば次の日の時刻とする
                 // 6時から3時間おきに天気情報を取得する
@@ -272,62 +340,68 @@ class AlarmViewModel(
                     } else {
                         (alarmTime.hour - FIRST_FORECAST_TIME) / 3 + 1
                     }
-                getWeatherByLocation(result.lat, result.lon, cnt)
+                getWeatherByLocation(id, result.lat, result.lon, cnt)
             } catch (e: Exception) {
-                _coordinateState.value = CoordinateState.Error(e.message ?: "Unknown error")
+                updateAlarmUiState(id) {
+                    it.copy(
+                        coordinateState = CoordinateState.Error(e.message ?: "Unknown error"),
+                    )
+                }
             }
         }
     }
 
     private fun getWeatherByLocation(
+        id: Int,
         lat: Double,
         lon: Double,
         cnt: Int,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            _weatherState.value = WeatherState.Loading
+            updateAlarmUiState(id) {
+                it.copy(
+                    weatherState = WeatherState.Loading,
+                )
+            }
             try {
                 val result = getWeatherRepositoryImpl.getWeather(lat, lon, cnt)
-                _weatherState.value =
-                    WeatherState.Success(
-                        result.list
-                            .last()
-                            .weather[0]
-                            .description,
+                updateAlarmUiState(id) {
+                    it.copy(
+                        weatherState =
+                            WeatherState.Success(
+                                result.list
+                                    .last()
+                                    .weather[0]
+                                    .description,
+                            ),
                     )
+                }
             } catch (e: Exception) {
                 Log.d("result", e.message.toString())
-                _weatherState.value = WeatherState.Error(e.message ?: "Unknown error")
+                updateAlarmUiState(id) {
+                    it.copy(
+                        weatherState = WeatherState.Error(e.message ?: "Unknown error"),
+                    )
+                }
             }
         }
     }
-}
 
-sealed interface CoordinateState {
-    data object Initial : CoordinateState
-
-    data object Loading : CoordinateState
-
-    data class Success(
-        val lat: Double,
-        val lon: Double,
-    ) : CoordinateState
-
-    data class Error(
-        val message: String,
-    ) : CoordinateState
-}
-
-sealed interface WeatherState {
-    data object Initial : WeatherState
-
-    data object Loading : WeatherState
-
-    data class Success(
-        val weather: String,
-    ) : WeatherState
-
-    data class Error(
-        val message: String,
-    ) : WeatherState
+    private fun updateAlarmUiState(
+        id: Int,
+        updateAlarmUiState: (AlarmUiState) -> AlarmUiState,
+    ) {
+        _homeUiState.update {
+            it.copy(
+                alarmItemList =
+                    it.alarmItemList.map { alarmUiState ->
+                        if (alarmUiState.alarmItemState.id == id) {
+                            updateAlarmUiState(alarmUiState)
+                        } else {
+                            alarmUiState
+                        }
+                    },
+            )
+        }
+    }
 }

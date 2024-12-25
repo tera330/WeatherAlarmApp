@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -35,7 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.weatheralarmapp.R
-import com.example.weatheralarmapp.ui.common.ExpandButton
+import com.example.weatheralarmapp.ui.common.IndeterminateLinearIndicator
 import com.example.weatheralarmapp.ui.features.alarm.components.RequestExactAlarmPermission
 import com.example.weatheralarmapp.ui.features.alarm.components.ToggleTimePicker
 import com.example.weatheralarmapp.util.dateformat.createHourString
@@ -49,9 +50,9 @@ import kotlin.concurrent.timer
 fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
-    weatherState: WeatherState,
     expandedAlarmItem: () -> Unit,
-    updateUntilTime: (Long, Long) -> Unit,
+    updateUntilTime: (Int, Long, Long) -> Unit,
+    updateUntilAlarmTimeByWeather: (Int, Long, Long) -> Unit,
     onSwitchAlarm: (Boolean) -> Unit,
     onSwitchWeatherForecast: (Boolean) -> Unit,
     selectTime: (String) -> Unit,
@@ -74,6 +75,12 @@ fun AlarmItem(
     val radioOptions = listOf("15", "30", "45", "60")
     val alarmItemState = alarmUiState.alarmItemState
 
+    // ReComposeで全てのアイテムの天気に影響が出てしまっている
+    // 応急処置
+    if (alarmUiState.weatherState == WeatherState.Initial) {
+        fetchWeather()
+    }
+
     Card(modifier = modifier.padding(5.dp)) {
         Column(
             modifier =
@@ -88,13 +95,34 @@ fun AlarmItem(
                             ),
                     ),
         ) {
+            if (alarmItemState.isAlarmOn) {
+                when (alarmUiState.weatherState) {
+                    is WeatherState.Error -> {
+                        Text("天気予報の取得に失敗しました")
+                    }
+                    is WeatherState.Success -> {
+                        Text(
+                            "${alarmUiState.hoursUntilAlarm}時間${alarmUiState.minutesUntilAlarm}分後は${alarmUiState.weatherState.weather}の予報です。",
+                        )
+                    }
+                    else -> {
+                        IndeterminateLinearIndicator(
+                            modifier = modifier.fillMaxWidth(),
+                            loading = true,
+                        )
+                    }
+                }
+            }
+
             AlarmTimeRow(
                 modifier = modifier,
+                isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
                 toggleShowTimePicker = { showTimePicker = !showTimePicker },
                 alarmText = alarmItemState.alarmTime,
                 changedAlarmText = alarmItemState.changedAlarmTImeByWeather,
                 expanded = alarmUiState.expandedAlarmItem,
                 onExpandToggle = { expandedAlarmItem() },
+                onDeleteAlarm = { onDeleteAlarm() },
             )
 
             Spacer(modifier = Modifier.padding(5.dp))
@@ -115,20 +143,23 @@ fun AlarmItem(
                         val alarmTime =
                             if (alarmItemState.alarmTime.length == 5) {
                                 LocalTime.parse(alarmItemState.alarmTime)
-                            } else {
+                            } else { // 7:00のように先頭に0がない場合、0を追加してないと変換できない
                                 LocalTime.parse("0${alarmItemState.alarmTime}")
                             }
 
-                        LaunchedEffect(Unit) {
-                            fetchWeather()
-                        }
-
                         // アラームの設定時間と現在時刻の差分を計算
-                        LaunchedEffect(currentTime, alarmItemState.alarmTime, alarmItemState.selectedEarlyAlarmTime, weatherState) {
+                        LaunchedEffect(
+                            currentTime,
+                            alarmItemState.alarmTime,
+                            alarmItemState.selectedEarlyAlarmTime,
+                            alarmUiState.weatherState,
+                        ) {
                             duration =
+                                // アラームの設定時間が現在時刻より未来の場合
                                 if (alarmTime.isAfter(currentTime) || alarmTime == currentTime) {
                                     Duration.between(currentTime, alarmTime)
                                 } else {
+                                    // アラームの設定時間が現在時刻より過去の場合
                                     val durationUntilMidnight =
                                         Duration.between(currentTime, LocalTime.MIDNIGHT)
                                     val durationAfterMidnight =
@@ -140,35 +171,31 @@ fun AlarmItem(
                                             ),
                                     )
                                 }
+
+                            updateUntilTime(
+                                alarmItemState.id,
+                                duration.toHours(),
+                                duration.toMinutes() % 60,
+                            )
+
                             if (alarmItemState.isWeatherForecastOn) {
-                                if (weatherState is WeatherState.Success) {
-                                    when (weatherState.weather) {
-                                        "小雨" -> {
-                                            if (duration.toMinutes() >= alarmItemState.selectedEarlyAlarmTime.toLong()) {
-                                                duration =
-                                                    duration.minus(Duration.ofMinutes(alarmItemState.selectedEarlyAlarmTime.toLong()))
-                                            }
-                                            isBadWeather(true)
+                                if (alarmUiState.weatherState is WeatherState.Success) {
+                                    if (alarmUiState.weatherState.weather == "小雨" ||
+                                        alarmUiState.weatherState.weather == "曇りがち" ||
+                                        alarmUiState.weatherState.weather == "曇" ||
+                                        alarmUiState.weatherState.weather == "厚い雲" ||
+                                        alarmUiState.weatherState.weather == "適度な雨" ||
+                                        alarmUiState.weatherState.weather == "雪"
+                                        // 晴天
+                                    ) {
+                                        val selectedEarlyAlarmTime: Long = alarmItemState.selectedEarlyAlarmTime.split(":")[1].toLong()
+                                        if (duration.toMinutes() >= selectedEarlyAlarmTime) {
+                                            duration =
+                                                duration.minus(Duration.ofMinutes(selectedEarlyAlarmTime))
                                         }
-
-                                        "適度な雨" -> {
-                                            if (duration.toMinutes() >= alarmItemState.selectedEarlyAlarmTime.toLong()) {
-                                                duration =
-                                                    duration.minus(Duration.ofMinutes(alarmItemState.selectedEarlyAlarmTime.toLong()))
-                                            }
-                                            isBadWeather(true)
-                                        }
-
-                                        "雪" -> {
-                                            if (duration.toMinutes() >= alarmItemState.selectedEarlyAlarmTime.toLong()) {
-                                                duration =
-                                                    duration.minus(Duration.ofMinutes(alarmItemState.selectedEarlyAlarmTime.toLong()))
-                                            }
-                                            isBadWeather(true)
-                                        }
-                                        else -> {
-                                            isBadWeather(false)
-                                        }
+                                        isBadWeather(true)
+                                    } else {
+                                        isBadWeather(false)
                                     }
                                 }
                             }
@@ -177,15 +204,20 @@ fun AlarmItem(
                                 val hour = duration.toMinutes() / 60
                                 val minute = duration.toMinutes() % 60
 
-                                updateUntilTime(hour, minute)
+                                updateUntilAlarmTimeByWeather(alarmItemState.id, hour, minute)
                             } else {
                                 val hour = 0.toLong()
                                 val minute = duration.toMinutes()
 
-                                updateUntilTime(hour, minute)
+                                updateUntilAlarmTimeByWeather(alarmItemState.id, hour, minute)
                             }
                         }
-                        stringResource(R.string.timeUntilAlarm, alarmUiState.hoursUntilAlarm, alarmUiState.minutesUntilAlarm)
+
+                        stringResource(
+                            R.string.timeUntilAlarm,
+                            alarmUiState.earlyHoursUntilAlarmByWeather,
+                            alarmUiState.earlyMinutesUntilAlarmByWeather,
+                        )
                     } else {
                         stringResource(R.string.alarm_of_message)
                     }
@@ -210,37 +242,21 @@ fun AlarmItem(
                 isChecked = alarmItemState.isWeatherForecastOn,
                 onSwitch = {
                     onSwitchWeatherForecast(it)
-                    if (alarmItemState.isWeatherForecastOn) {
-                        fetchWeather()
-                    }
                 },
             )
 
             RequestExactAlarmPermission(openDialog = openAlarmPermissionDialog)
 
-            if (alarmUiState.expandedAlarmItem) {
-                Column(modifier = modifier) {
+            if (alarmItemState.isWeatherForecastOn) {
+                Column(modifier = modifier.fillMaxSize()) {
                     RadioButtonGroup(
                         modifier = modifier,
                         radioOptions = radioOptions,
                         selectedOption = alarmItemState.selectedEarlyAlarmTime.substringAfter(":"),
                         onOptionSelected = { String ->
-                            if (!alarmItemState.isWeatherForecastOn) {
-                                selectRadioButton("00:00")
-                            } else {
-                                selectRadioButton("00:$String")
-                            }
+                            selectRadioButton("00:$String")
                         },
                     )
-
-                    IconButton(onClick = {
-                        onDeleteAlarm()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                        )
-                    }
                 }
             }
         }
@@ -262,35 +278,69 @@ fun AlarmItem(
 @Composable
 fun AlarmTimeRow(
     modifier: Modifier,
+    isWeatherForecastOn: Boolean,
     toggleShowTimePicker: () -> Unit,
     alarmText: String,
     changedAlarmText: String,
+    onDeleteAlarm: () -> Unit,
     expanded: Boolean,
     onExpandToggle: () -> Unit,
 ) {
-    Row(modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
             modifier =
                 modifier.clickable {
                     toggleShowTimePicker()
                 },
             text = alarmText,
-            fontSize = 40.sp,
+            fontSize = 30.sp,
         )
-        Text(
-            text = " -> $changedAlarmText",
-            fontSize = 40.sp,
-        )
+        if (isWeatherForecastOn) {
+            Text(
+                text = " → $changedAlarmText",
+                fontSize = 35.sp,
+            )
+        }
 
         Spacer(modifier = modifier.weight(1f))
-        ExpandButton(
+
+        IconButton(
             modifier = modifier,
-            expanded = expanded,
             onClick = {
-                onExpandToggle()
+                onDeleteAlarm()
             },
-        )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+            )
+        }
+//        ExpandButton(
+//            modifier = modifier,
+//            expanded = expanded,
+//            onClick = {
+//                onExpandToggle()
+//            },
+//        )
     }
+}
+
+@Preview
+@Composable
+fun AlarmTimeRowPreview() {
+    AlarmTimeRow(
+        modifier = Modifier,
+        isWeatherForecastOn = true,
+        toggleShowTimePicker = { },
+        alarmText = "07:00",
+        changedAlarmText = "07:00",
+        expanded = false,
+        onDeleteAlarm = { },
+        onExpandToggle = { },
+    )
 }
 
 @Composable
@@ -390,10 +440,12 @@ fun AlarmItemPreview() {
                         isWeatherForecastOn = false,
                     ),
                 expandedAlarmItem = false,
+                weatherState = WeatherState.Initial,
+                coordinateState = CoordinateState.Initial,
             ),
-        weatherState = WeatherState.Initial,
         expandedAlarmItem = { },
-        updateUntilTime = { hours, minutes -> },
+        updateUntilTime = { id, hours, minutes -> },
+        updateUntilAlarmTimeByWeather = { id, hours, minutes -> },
         onSwitchAlarm = { Boolean -> },
         onSwitchWeatherForecast = { Boolean -> },
         isBadWeather = { Boolean -> },

@@ -59,9 +59,7 @@ fun WeatherAlarmScreen(
     val scope = rememberCoroutineScope()
     val isBadWeather = remember { mutableStateOf(false) }
 
-    val alarmUiStateFlow = alarmViewModel.alarmUiState
-    val alarmUiState = alarmUiStateFlow.collectAsState().value
-
+    val alarmUiState = alarmViewModel.alarmUiState.collectAsState().value
     val alarmItemState = alarmUiState.alarmItemState
 
     val homeUiState by alarmViewModel.homeUiState.collectAsState()
@@ -81,29 +79,17 @@ fun WeatherAlarmScreen(
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-                items(items = homeUiState.alarmItemList, key = { it.id }) { item ->
+                items(items = homeUiState.alarmItemList, key = { it.alarmItemState.id }) { item ->
                     Column {
                         AlarmItem(
                             modifier = Modifier,
-                            alarmUiState =
-                                AlarmUiState(
-                                    alarmItemState =
-                                        AlarmItemState(
-                                            id = item.id,
-                                            isAlarmOn = item.isAlarmOn,
-                                            selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
-                                            isWeatherForecastOn = item.isWeatherForecastOn,
-                                            alarmTime = item.alarmTime,
-                                            changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
-                                        ),
-                                    expandedAlarmItem = alarmUiState.expandedAlarmItem,
-                                    hoursUntilAlarm = alarmUiState.hoursUntilAlarm,
-                                    minutesUntilAlarm = alarmUiState.minutesUntilAlarm,
-                                ),
-                            weatherState = alarmViewModel.weatherState.value,
+                            alarmUiState = item,
                             expandedAlarmItem = { alarmViewModel.expandedAlarmItem() },
-                            updateUntilTime = { hours, minutes ->
-                                alarmViewModel.updateUntilAlarmTime(hours, minutes)
+                            updateUntilTime = { id, hours, minutes ->
+                                alarmViewModel.updateUntilAlarmTime(id, hours, minutes)
+                            },
+                            updateUntilAlarmTimeByWeather = { id, hours, minutes ->
+                                alarmViewModel.updateUntilAlarmTimeByWeather(id, hours, minutes)
                             },
                             onSwitchAlarm = { Boolean ->
                                 scope.launch {
@@ -111,12 +97,12 @@ fun WeatherAlarmScreen(
                                         alarmViewModel.updateAlarmItem(
                                             alarmManager,
                                             com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.id,
-                                                alarmTime = item.alarmTime,
-                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
+                                                id = item.alarmItemState.id,
+                                                alarmTime = item.alarmItemState.alarmTime,
+                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
                                                 isAlarmOn = Boolean,
-                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
                                             ),
                                             isBadWeather.value,
                                         )
@@ -129,11 +115,11 @@ fun WeatherAlarmScreen(
                                         alarmViewModel.updateAlarmItem(
                                             alarmManager,
                                             com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.id,
-                                                alarmTime = item.alarmTime,
-                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = item.changedAlarmTImeByWeather,
-                                                isAlarmOn = item.isAlarmOn,
+                                                id = item.alarmItemState.id,
+                                                alarmTime = item.alarmItemState.alarmTime,
+                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
+                                                changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
+                                                isAlarmOn = item.alarmItemState.isAlarmOn,
                                                 isWeatherForecastOn = Boolean,
                                             ),
                                             isBadWeather.value,
@@ -150,12 +136,12 @@ fun WeatherAlarmScreen(
                                         alarmViewModel.updateAlarmItem(
                                             alarmManager,
                                             com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.id,
+                                                id = item.alarmItemState.id,
                                                 alarmTime = String,
-                                                selectedEarlyAlarmTime = item.selectedEarlyAlarmTime,
+                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
                                                 changedAlarmTImeByWeather = String,
-                                                isAlarmOn = item.isAlarmOn,
-                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                                isAlarmOn = item.alarmItemState.isAlarmOn,
+                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
                                             ),
                                             isBadWeather.value,
                                         )
@@ -163,27 +149,27 @@ fun WeatherAlarmScreen(
                                 }
                             },
                             selectRadioButton = { String ->
-                                val baseTime = LocalTime.parse(item.alarmTime)
+                                val baseTime = LocalTime.parse(item.alarmItemState.alarmTime)
                                 val changedAlarmTImeByWeather =
                                     when (String) {
-                                        "00:00" -> item.alarmTime
+                                        "00:00" -> item.alarmItemState.alarmTime
                                         "00:15" -> baseTime.minusMinutes(15).toString()
                                         "00:30" -> baseTime.minusMinutes(30).toString()
                                         "00:45" -> baseTime.minusMinutes(45).toString()
                                         "00:60" -> baseTime.minusHours(1).toString()
-                                        else -> item.alarmTime
+                                        else -> item.alarmItemState.alarmTime
                                     }
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
                                         alarmViewModel.updateAlarmItem(
                                             alarmManager,
                                             com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.id,
-                                                alarmTime = item.alarmTime,
+                                                id = item.alarmItemState.id,
+                                                alarmTime = item.alarmItemState.alarmTime,
                                                 selectedEarlyAlarmTime = String,
                                                 changedAlarmTImeByWeather = changedAlarmTImeByWeather,
-                                                isAlarmOn = item.isAlarmOn,
-                                                isWeatherForecastOn = item.isWeatherForecastOn,
+                                                isAlarmOn = item.alarmItemState.isAlarmOn,
+                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
                                             ),
                                             isBadWeather.value,
                                         )
@@ -198,7 +184,11 @@ fun WeatherAlarmScreen(
                                 }
                             },
                             fetchWeather = {
-                                alarmViewModel.getWeatherByCityName("Tokyo", LocalTime.parse(item.alarmTime))
+                                alarmViewModel.getWeatherByCityName(
+                                    item.alarmItemState.id,
+                                    "Tokyo",
+                                    LocalTime.parse(item.alarmItemState.alarmTime),
+                                )
                             },
                             alarmManager = alarmManager,
                         )
