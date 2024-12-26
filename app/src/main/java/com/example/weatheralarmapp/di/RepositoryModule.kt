@@ -1,14 +1,14 @@
 package com.example.weatheralarmapp.di
 
-import android.content.Context
-import com.example.weatheralarmapp.data.local.AlarmDatabase
 import com.example.weatheralarmapp.data.local.AlarmItemDao
+import com.example.weatheralarmapp.data.remote.WeatherApiService
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
 import com.example.weatheralarmapp.data.repository.AlarmItemRepositoryImpl
+import com.example.weatheralarmapp.data.repository.GetWeatherRepository
+import com.example.weatheralarmapp.data.repository.GetWeatherRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -21,11 +21,6 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideAlarmDatabase(
-        @ApplicationContext context: Context,
-    ): AlarmDatabase = AlarmDatabase.getDatabase(context)
-
-    @Provides
-    @Singleton
-    fun provideAlarmItemDao(alarmDatabase: AlarmDatabase): AlarmItemDao = alarmDatabase.alarmItemDao()
+    fun provideGetWeatherRepository(weatherApiService: WeatherApiService): GetWeatherRepository =
+        GetWeatherRepositoryImpl(weatherApiService)
 }
