@@ -24,13 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.weatheralarmapp.R
-import com.example.weatheralarmapp.data.local.AlarmDatabase
-import com.example.weatheralarmapp.data.remote.WeatherApi
-import com.example.weatheralarmapp.data.repository.AlarmItemRepository
-import com.example.weatheralarmapp.data.repository.AlarmItemRepositoryImpl
-import com.example.weatheralarmapp.data.repository.GetWeatherRepositoryImpl
 import com.example.weatheralarmapp.ui.features.alarm.components.ToggleTimePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,16 +37,7 @@ import java.time.LocalTime
 fun WeatherAlarmScreen(
     modifier: Modifier,
     context: Application = LocalContext.current.applicationContext as Application,
-    alarmItemRepository: AlarmItemRepository,
-    getWeatherRepository: GetWeatherRepositoryImpl,
-    alarmViewModel: AlarmViewModel =
-        viewModel {
-            AlarmViewModel(
-                context.applicationContext as Application,
-                alarmItemRepository,
-                getWeatherRepository,
-            )
-        },
+    alarmViewModel: AlarmViewModel = hiltViewModel(),
     showTimePicker: Boolean,
     onShowTimePickerChange: (Boolean) -> Unit,
 ) {
@@ -238,16 +224,8 @@ fun WeatherAlarmScreen(
 @Preview
 @Composable
 fun WeatherAlarmScreenPreview() {
-    val context = LocalContext.current
-    val alarmItemRepository: AlarmItemRepository by lazy {
-        AlarmItemRepositoryImpl(AlarmDatabase.getDatabase(context).alarmItemDao())
-    }
-    val weatherApiService = WeatherApi.retrofitService
-
     WeatherAlarmScreen(
         modifier = Modifier.fillMaxSize(),
-        alarmItemRepository = alarmItemRepository,
-        getWeatherRepository = GetWeatherRepositoryImpl(weatherApiService),
         showTimePicker = false,
         onShowTimePickerChange = { Boolean -> },
     )
