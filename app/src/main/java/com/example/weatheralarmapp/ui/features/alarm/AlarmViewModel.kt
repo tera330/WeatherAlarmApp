@@ -1,6 +1,5 @@
 package com.example.weatheralarmapp.ui.features.alarm
 
-import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Application
 import android.util.Log
