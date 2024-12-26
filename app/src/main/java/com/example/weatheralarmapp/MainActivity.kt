@@ -23,19 +23,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import com.example.weatheralarmapp.data.repository.AlarmItemRepository
-import com.example.weatheralarmapp.data.repository.GetWeatherRepositoryImpl
 import com.example.weatheralarmapp.ui.features.alarm.WeatherAlarmScreen
 import com.example.weatheralarmapp.ui.theme.WeatherAlarmAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject lateinit var alarmItemRepository: AlarmItemRepository
-
-    @Inject lateinit var getWeatherRepository: GetWeatherRepositoryImpl
-
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,8 +65,6 @@ class MainActivity : ComponentActivity() {
                         onShowTimePickerChange = { Boolean ->
                             showTimePicker = Boolean
                         },
-                        alarmItemRepository = alarmItemRepository,
-                        getWeatherRepository = getWeatherRepository,
                     )
                 }
             }
