@@ -3,16 +3,15 @@ package com.example.weatheralarmapp.ui.features.alarm
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.Application
-import android.app.PendingIntent
-import android.app.PendingIntent.FLAG_UPDATE_CURRENT
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.weatheralarmapp.data.local.AlarmItem
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
 import com.example.weatheralarmapp.data.repository.GetWeatherRepository
-import com.example.weatheralarmapp.receiver.AlarmReceiver
+import com.example.weatheralarmapp.domain.usecase.AddAlarmItemUseCase
+import com.example.weatheralarmapp.domain.usecase.DeleteAlarmItemUseCase
+import com.example.weatheralarmapp.domain.usecase.UpdateAlarmItemUseCase
 import com.example.weatheralarmapp.util.dateformat.createHourString
 import com.example.weatheralarmapp.util.dateformat.createMinuteString
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,9 +34,10 @@ class AlarmViewModel
         application: Application,
         private val alarmItemRepository: AlarmItemRepository,
         private val getWeatherRepository: GetWeatherRepository,
+        private val addAlarmItemUseCase: AddAlarmItemUseCase,
+        private val deleteAlarmItemUseCase: DeleteAlarmItemUseCase,
+        private val updateAlarmItemUseCase: UpdateAlarmItemUseCase,
     ) : AndroidViewModel(application) {
-        @SuppressLint("StaticFieldLeak")
-        private val context = application.applicationContext
 
         private val currentTime = LocalDateTime.now()
         private val hourStr = createHourString(currentTime.hour)
@@ -159,8 +158,7 @@ class AlarmViewModel
             alarmManager: AlarmManager,
             alarmItem: AlarmItem,
         ) {
-            alarmItemRepository.insertAlarmItem(alarmItem)
-            setAlarm(alarmManager, alarmItem, false)
+            addAlarmItemUseCase.addAlarmItem(alarmManager, alarmItem)
         }
 
         suspend fun updateAlarmItem(
@@ -168,51 +166,7 @@ class AlarmViewModel
             alarmItem: AlarmItem,
             isBadWeather: Boolean,
         ) {
-            alarmItemRepository.updateAlarmItem(alarmItem)
-
-            // アラームをオンにした時
-            if (alarmItem.isAlarmOn && !alarmItem.isWeatherForecastOn) {
-                val changedAlarmByWeather = alarmItem.alarmTime
-                setAlarm(
-                    alarmManager,
-                    AlarmItem(
-                        alarmItem.id,
-                        alarmItem.alarmTime,
-                        changedAlarmByWeather,
-                        "0",
-                        true,
-                        isWeatherForecastOn = false,
-                    ),
-                    isBadWeather,
-                )
-                // 天気予報をオンにした時
-            } else if (alarmItem.isAlarmOn && alarmItem.isWeatherForecastOn) {
-                setAlarm(
-                    alarmManager,
-                    AlarmItem(
-                        alarmItem.id,
-                        alarmItem.alarmTime,
-                        alarmItem.changedAlarmTImeByWeather,
-                        selectedEarlyAlarmTime = "0",
-                        isAlarmOn = true,
-                        isWeatherForecastOn = true,
-                    ),
-                    isBadWeather,
-                )
-                // アラームをオフにした時
-            } else {
-                cancelAlarm(
-                    alarmManager,
-                    AlarmItem(
-                        alarmItem.id,
-                        alarmItem.alarmTime,
-                        alarmItem.changedAlarmTImeByWeather,
-                        "0",
-                        false,
-                        alarmItem.isWeatherForecastOn,
-                    ),
-                )
-            }
+            updateAlarmItemUseCase.updateAlarmItem(alarmManager, alarmItem, isBadWeather)
         }
 
         suspend fun deleteAlarmItem(
@@ -220,12 +174,7 @@ class AlarmViewModel
             alarmManager: AlarmManager,
         ) {
             val alarmItem = alarmUiState.alarmItemState.toAlarmItem(alarmUiState.alarmItemState)
-
-            cancelAlarm(
-                alarmManager,
-                alarmItem,
-            )
-            alarmItemRepository.deleteAlarmItem(alarmItem)
+            deleteAlarmItemUseCase.deleteAlarmItem(alarmItem, alarmManager)
         }
 
         private fun AlarmItemState.toAlarmItem(alarmItemState: AlarmItemState): AlarmItem =
@@ -237,83 +186,6 @@ class AlarmViewModel
                 isAlarmOn = alarmItemState.isAlarmOn,
                 isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
             )
-
-        private fun setAlarm(
-            alarmManager: AlarmManager,
-            alarmItem: AlarmItem,
-            isBadWeather: Boolean,
-        ) {
-            val intent =
-                Intent(context, AlarmReceiver::class.java).apply {
-                    action = "START_ALARM"
-                }
-            val pendingIntent =
-                PendingIntent.getBroadcast(
-                    context,
-                    alarmItem.id,
-                    intent,
-                    PendingIntent.FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT,
-                )
-            val calendar: Calendar =
-                if (isBadWeather) {
-                    Calendar.getInstance().apply {
-                        timeInMillis = System.currentTimeMillis()
-                        set(
-                            Calendar.HOUR_OF_DAY,
-                            alarmItem.changedAlarmTImeByWeather.substringBefore(":").toInt(),
-                        )
-                        set(
-                            Calendar.MINUTE,
-                            alarmItem.changedAlarmTImeByWeather.substringAfter(":").toInt(),
-                        )
-                        set(Calendar.SECOND, 0)
-                    }
-                } else {
-                    Calendar.getInstance().apply {
-                        timeInMillis = System.currentTimeMillis()
-                        set(
-                            Calendar.HOUR_OF_DAY,
-                            alarmItem.alarmTime.substringBefore(":").toInt(),
-                        )
-                        set(
-                            Calendar.MINUTE,
-                            alarmItem.alarmTime.substringAfter(":").toInt(),
-                        )
-                        set(Calendar.SECOND, 0)
-                    }
-                }
-
-            if (calendar.timeInMillis >= System.currentTimeMillis()) {
-                alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
-                    pendingIntent,
-                )
-            } else {
-                calendar.add(Calendar.DAY_OF_MONTH, 1)
-                alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent),
-                    pendingIntent,
-                )
-            }
-        }
-
-        private fun cancelAlarm(
-            alarmManager: AlarmManager,
-            alarmItem: AlarmItem,
-        ) {
-            val intent =
-                Intent(context, AlarmReceiver::class.java).apply {
-                    action = "START_ALARM"
-                }
-            val pendingIntent =
-                PendingIntent.getBroadcast(
-                    context,
-                    alarmItem.id,
-                    intent,
-                    PendingIntent.FLAG_IMMUTABLE or FLAG_UPDATE_CURRENT,
-                )
-            alarmManager.cancel(pendingIntent)
-        }
 
         fun getWeatherByCityName(
             id: Int,
