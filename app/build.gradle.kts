@@ -27,14 +27,21 @@ plugins {
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
+@Suppress("UnstableApiUsage")
 android {
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     namespace = "com.example.weatheralarmapp"
     compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.weatheralarmapp"
         minSdk = 26
-        targetSdk = 35
+        compileSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -69,7 +76,13 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes +=
+                setOf(
+                    "/META-INF/{AL2.0,LGPL2.1}",
+                    "META-INF/LICENSE.md",
+                    "META-INF/NOTICE.md",
+                    "META-INF/LICENSE-notice.md",
+                )
         }
     }
 }
@@ -88,6 +101,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.junit.ktx)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.room.runtime)
@@ -103,6 +117,10 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    androidTestImplementation(libs.mockk.android)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
