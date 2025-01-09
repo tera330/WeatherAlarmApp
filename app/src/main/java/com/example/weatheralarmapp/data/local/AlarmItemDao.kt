@@ -19,6 +19,9 @@ interface AlarmItemDao {
     @Delete
     suspend fun delete(alarmItem: AlarmItem)
 
+    @Query("SELECT * from alarm_items WHERE id = :id")
+    fun getAlarmItemById(id: Int): AlarmItem?
+
     @Query("SELECT * from alarm_items ORDER BY id ASC")
     fun getAllAlarmItems(): Flow<List<AlarmItem>>
 }
