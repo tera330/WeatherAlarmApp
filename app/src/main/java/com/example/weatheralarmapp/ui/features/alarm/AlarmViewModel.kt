@@ -1,9 +1,9 @@
 package com.example.weatheralarmapp.ui.features.alarm
 
 import android.app.AlarmManager
-import android.app.Application
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
+import androidx.compose.runtime.toMutableStateList
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.weatheralarmapp.data.local.AlarmItem
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
@@ -30,14 +30,12 @@ import javax.inject.Inject
 class AlarmViewModel
     @Inject
     constructor(
-        application: Application,
         private val alarmItemRepository: AlarmItemRepository,
         private val getWeatherRepository: GetWeatherRepository,
         private val addAlarmItemUseCase: AddAlarmItemUseCase,
         private val deleteAlarmItemUseCase: DeleteAlarmItemUseCase,
         private val updateAlarmItemUseCase: UpdateAlarmItemUseCase,
-    ) : AndroidViewModel(application) {
-
+    ) : ViewModel() {
         private val currentTime = LocalDateTime.now()
         private val hourStr = createHourString(currentTime.hour)
         private val minutesStr = createMinuteString(currentTime.minute)
@@ -47,16 +45,9 @@ class AlarmViewModel
                 AlarmUiState(
                     alarmItemState =
                         AlarmItemState(
-                            id = 0,
                             alarmTime = "$hourStr:$minutesStr",
-                            selectedEarlyAlarmTime = "00:00",
                             changedAlarmTImeByWeather = "$hourStr:$minutesStr",
                         ),
-                    weatherState = WeatherState.Initial,
-                    coordinateState = CoordinateState.Initial,
-                    expandedAlarmItem = false,
-                    hoursUntilAlarm = 0L,
-                    minutesUntilAlarm = 0L,
                 ),
             )
         val alarmUiState: StateFlow<AlarmUiState>
@@ -65,69 +56,124 @@ class AlarmViewModel
         private var _homeUiState: MutableStateFlow<HomeUiState> = MutableStateFlow(HomeUiState())
         val homeUiState: StateFlow<HomeUiState> = _homeUiState.asStateFlow()
 
+        // 　検証ように保存
+//        init {
+//            viewModelScope.launch {
+//                alarmItemRepository
+//                    .getAllAlarmItemsStream()
+//                    .map { alarmItems ->
+//                        alarmItems.map { alarmItem ->
+//                            AlarmUiState(
+//                                alarmItemState = AlarmItemState(
+//                                    id = alarmItem.id,
+//                                    alarmTime = alarmItem.alarmTime,
+//                                    selectedEarlyAlarmTime = alarmItem.selectedEarlyAlarmTime,
+//                                    changedAlarmTImeByWeather = alarmItem.changedAlarmTImeByWeather,
+//                                    isAlarmOn = alarmItem.isAlarmOn,
+//                                    isWeatherForecastOn = alarmItem.isWeatherForecastOn,
+//                                )
+//                            )
+//                        }.toMutableStateList()
+//                    }
+//                    // .distinctUntilChanged() // 同じリストなら更新しない
+//                    .collect { updatedAlarmItemList ->
+//                        _homeUiState.update { currentState ->
+//                            currentState.copy(alarmItemList = updatedAlarmItemList)
+//                        }
+//                    }
+//            }
+//        }
+
+        // AlarmUiState自体をいじっていないので、WeatherStateの不要な初期化が発生しない可能性
         init {
+            // Roomからのストリームデータと毎回計算が必要なUIデータを統合
+            // ストリームが更新されるたびこのブロックが呼び出されるが、計算が必要な一時的なUIデータの初期化を防ぐ
+            // ストリームから得られたデータと現在の状態を比較し、新しい状態として更新する
             viewModelScope.launch {
-                // リポジトリからのフローを収集して _homeUiState を更新
-                alarmItemRepository
-                    .getAllAlarmItemsStream()
-                    .map { alarmItems ->
-                        // リポジトリから受け取ったデータを HomeUiState に変換
-                        HomeUiState(
-                            alarmItemList =
-                                alarmItems.map { alarmItem ->
-                                    AlarmUiState(
-                                        alarmItemState =
-                                            AlarmItemState(
-                                                id = alarmItem.id,
-                                                alarmTime = alarmItem.alarmTime,
-                                                selectedEarlyAlarmTime = alarmItem.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = alarmItem.changedAlarmTImeByWeather,
-                                                isAlarmOn = alarmItem.isAlarmOn,
-                                                isWeatherForecastOn = alarmItem.isWeatherForecastOn,
-                                            ),
+                alarmItemRepository.getAllAlarmItemsStream().collect { alarmItems ->
+                    val newItemsMap = alarmItems.associateBy { it.id }
+                    _homeUiState.update { currentState ->
+                        val updatedList = currentState.alarmItemList.toMutableList()
+                        // 削除されたアイテムを検出して削除
+                        val newIds: Set<Int> = newItemsMap.keys
+                        // ストリームから取得したアイテムのIDが現在のリストに存在しない場合、削除
+                        val itemsToRemove = updatedList.filter { it.alarmItemState.id !in newIds }
+                        updatedList.removeAll(itemsToRemove)
+
+                        // 既存のアイテムを更新
+                        updatedList.forEachIndexed { index, currentItem ->
+                            val newItem = newItemsMap[currentItem.alarmItemState.id]
+                            if (newItem != null) {
+                                val newAlarmItemState =
+                                    AlarmItemState(
+                                        id = newItem.id,
+                                        alarmTime = newItem.alarmTime,
+                                        selectedEarlyAlarmTime = newItem.selectedEarlyAlarmTime,
+                                        changedAlarmTImeByWeather = newItem.changedAlarmTImeByWeather,
+                                        isAlarmOn = newItem.isAlarmOn,
+                                        isWeatherForecastOn = newItem.isWeatherForecastOn,
                                     )
-                                },
-                        )
-                    }.collect { updatedHomeUiState ->
-                        _homeUiState.value = updatedHomeUiState
+
+                                if (newAlarmItemState != currentItem.alarmItemState) {
+                                    updatedList[index] = currentItem.copy(alarmItemState = newAlarmItemState)
+                                }
+                            }
+                        }
+
+                        // 新しいアイテムを追加
+                        val currentIds = updatedList.map { it.alarmItemState.id }.toSet()
+                        val itemsToAdd =
+                            newIds.subtract(currentIds).map { id ->
+                                val alarmItem = newItemsMap[id]!!
+                                AlarmUiState(
+                                    alarmItemState =
+                                        AlarmItemState(
+                                            id = alarmItem.id,
+                                            alarmTime = alarmItem.alarmTime,
+                                            selectedEarlyAlarmTime = alarmItem.selectedEarlyAlarmTime,
+                                            changedAlarmTImeByWeather = alarmItem.changedAlarmTImeByWeather,
+                                            isAlarmOn = alarmItem.isAlarmOn,
+                                            isWeatherForecastOn = alarmItem.isWeatherForecastOn,
+                                        ),
+                                )
+                            }
+                        updatedList.addAll(itemsToAdd)
+
+                        // 更新したリストを新しい HomeUiState に反映
+                        currentState.copy(alarmItemList = updatedList.toMutableStateList())
                     }
+                }
             }
         }
 
         private val FIRST_FORECAST_TIME = 6
 
-        fun expandedAlarmItem() {
-            _homeUiState.update {
-                it.copy(
-                    alarmItemList =
-                        it.alarmItemList.map { alarmUiState ->
-                            alarmUiState.copy(
-                                expandedAlarmItem = !alarmUiState.expandedAlarmItem,
-                            )
-                        },
-                )
-            }
-        }
+//        fun expandedAlarmItem() {
+//            _homeUiState.update {
+//                it.copy(
+//                    alarmItemList =
+//                        it.alarmItemList.map { alarmUiState ->
+//                            alarmUiState.copy(
+//                                expandedAlarmItem = !alarmUiState.expandedAlarmItem,
+//                            )
+//                        },
+//                )
+//            }
+//        }
 
         fun updateUntilAlarmTime(
             id: Int,
             hoursUntilAlarm: Long,
             minutesUntilAlarm: Long,
         ) {
-            _homeUiState.update {
-                it.copy(
-                    alarmItemList =
-                        it.alarmItemList.map { alarmUiState ->
-                            if (alarmUiState.alarmItemState.id == id) {
-                                alarmUiState.copy(
-                                    hoursUntilAlarm = hoursUntilAlarm,
-                                    minutesUntilAlarm = minutesUntilAlarm,
-                                )
-                            } else {
-                                alarmUiState
-                            }
-                        },
-                )
+            val index =
+                _homeUiState.value.alarmItemList.indexOfFirst { it.alarmItemState.id == id }
+            if (index != -1) {
+                _homeUiState.value.alarmItemList[index] =
+                    _homeUiState.value.alarmItemList[index].copy(
+                        hoursUntilAlarm = hoursUntilAlarm,
+                        minutesUntilAlarm = minutesUntilAlarm,
+                    )
             }
         }
 
@@ -136,20 +182,16 @@ class AlarmViewModel
             earlyHoursUntilAlarm: Long,
             earlyMinutesUntilAlarm: Long,
         ) {
-            _homeUiState.update {
-                it.copy(
-                    alarmItemList =
-                        it.alarmItemList.map { alarmUiState ->
-                            if (alarmUiState.alarmItemState.id == id) {
-                                alarmUiState.copy(
-                                    earlyHoursUntilAlarmByWeather = earlyHoursUntilAlarm,
-                                    earlyMinutesUntilAlarmByWeather = earlyMinutesUntilAlarm,
-                                )
-                            } else {
-                                alarmUiState
-                            }
-                        },
-                )
+            val index =
+                _homeUiState.value.alarmItemList.indexOfFirst { it.alarmItemState.id == id }
+            if (index != -1) {
+                _homeUiState.value.alarmItemList[index] =
+                    _homeUiState.value.alarmItemList[index].copy(
+                        earlyHoursUntilAlarmByWeather = earlyHoursUntilAlarm,
+                        earlyMinutesUntilAlarmByWeather = earlyMinutesUntilAlarm,
+                    )
+            } else {
+                alarmUiState
             }
         }
 
@@ -267,17 +309,11 @@ class AlarmViewModel
             id: Int,
             updateAlarmUiState: (AlarmUiState) -> AlarmUiState,
         ) {
-            _homeUiState.update {
-                it.copy(
-                    alarmItemList =
-                        it.alarmItemList.map { alarmUiState ->
-                            if (alarmUiState.alarmItemState.id == id) {
-                                updateAlarmUiState(alarmUiState)
-                            } else {
-                                alarmUiState
-                            }
-                        },
-                )
+            val index =
+                _homeUiState.value.alarmItemList.indexOfFirst { it.alarmItemState.id == id }
+            if (index != -1) {
+                val updatedAlarmUiState = updateAlarmUiState(_homeUiState.value.alarmItemList[index])
+                _homeUiState.value.alarmItemList[index] = updatedAlarmUiState
             }
         }
     }
