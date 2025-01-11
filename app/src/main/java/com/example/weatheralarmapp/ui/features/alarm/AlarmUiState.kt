@@ -2,9 +2,9 @@ package com.example.weatheralarmapp.ui.features.alarm
 
 // Roomが保持するデータ
 data class AlarmItemState(
-    val id: Int,
+    val id: Int = 0,
     val alarmTime: String,
-    val selectedEarlyAlarmTime: String,
+    val selectedEarlyAlarmTime: String = "00:00",
     val changedAlarmTImeByWeather: String,
     val isAlarmOn: Boolean = true,
     val isWeatherForecastOn: Boolean = false,

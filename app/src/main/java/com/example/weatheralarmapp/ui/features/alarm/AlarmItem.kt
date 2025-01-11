@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +51,7 @@ import kotlin.concurrent.timer
 fun AlarmItem(
     modifier: Modifier,
     alarmUiState: AlarmUiState,
-    expandedAlarmItem: () -> Unit,
+    // expandedAlarmItem: () -> Unit,
     updateUntilTime: (Int, Long, Long) -> Unit,
     updateUntilAlarmTimeByWeather: (Int, Long, Long) -> Unit,
     onSwitchAlarm: (Boolean) -> Unit,
@@ -74,12 +75,7 @@ fun AlarmItem(
     var duration by remember { mutableStateOf(Duration.ZERO) }
     val radioOptions = listOf("15", "30", "45", "60")
     val alarmItemState = alarmUiState.alarmItemState
-
-    // ReComposeで全てのアイテムの天気に影響が出てしまっている
-    // 応急処置
-    if (alarmUiState.weatherState == WeatherState.Initial) {
-        fetchWeather()
-    }
+    val isFetched = rememberSaveable { mutableStateOf(false) }
 
     Card(modifier = modifier.padding(5.dp)) {
         Column(
@@ -96,6 +92,11 @@ fun AlarmItem(
                     ),
         ) {
             if (alarmItemState.isAlarmOn) {
+                if (!isFetched.value) {
+                    fetchWeather()
+                    isFetched.value = true
+                }
+
                 when (alarmUiState.weatherState) {
                     is WeatherState.Error -> {
                         Text("天気予報の取得に失敗しました")
@@ -120,8 +121,8 @@ fun AlarmItem(
                 toggleShowTimePicker = { showTimePicker = !showTimePicker },
                 alarmText = alarmItemState.alarmTime,
                 changedAlarmText = alarmItemState.changedAlarmTImeByWeather,
-                expanded = alarmUiState.expandedAlarmItem,
-                onExpandToggle = { expandedAlarmItem() },
+                // expanded = alarmUiState.expandedAlarmItem,
+                // onExpandToggle = { expandedAlarmItem() },
                 onDeleteAlarm = { onDeleteAlarm() },
             )
 
@@ -267,6 +268,7 @@ fun AlarmItem(
                 val hourStr: String = createHourString(timePicker.hour)
                 val minuteStr: String = createMinuteString(timePicker.minute)
                 selectTime("$hourStr:$minuteStr")
+                fetchWeather()
                 showTimePicker = false
             },
             onDismiss = { showTimePicker = false },
@@ -283,8 +285,8 @@ fun AlarmTimeRow(
     alarmText: String,
     changedAlarmText: String,
     onDeleteAlarm: () -> Unit,
-    expanded: Boolean,
-    onExpandToggle: () -> Unit,
+    // expanded: Boolean,
+    // onExpandToggle: () -> Unit,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -337,9 +339,9 @@ fun AlarmTimeRowPreview() {
         toggleShowTimePicker = { },
         alarmText = "07:00",
         changedAlarmText = "07:00",
-        expanded = false,
+        // expanded = false,
         onDeleteAlarm = { },
-        onExpandToggle = { },
+        // onExpandToggle = { },
     )
 }
 
@@ -443,7 +445,7 @@ fun AlarmItemPreview() {
                 weatherState = WeatherState.Initial,
                 coordinateState = CoordinateState.Initial,
             ),
-        expandedAlarmItem = { },
+        // expandedAlarmItem = { },
         updateUntilTime = { id, hours, minutes -> },
         updateUntilAlarmTimeByWeather = { id, hours, minutes -> },
         onSwitchAlarm = { Boolean -> },

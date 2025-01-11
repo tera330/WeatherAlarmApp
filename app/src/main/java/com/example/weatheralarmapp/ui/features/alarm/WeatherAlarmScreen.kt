@@ -1,7 +1,6 @@
 package com.example.weatheralarmapp.ui.features.alarm
 
 import android.app.AlarmManager
-import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,11 +35,11 @@ import java.time.LocalTime
 @Composable
 fun WeatherAlarmScreen(
     modifier: Modifier,
-    context: Application = LocalContext.current.applicationContext as Application,
     alarmViewModel: AlarmViewModel = hiltViewModel(),
     showTimePicker: Boolean,
     onShowTimePickerChange: (Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
     val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
     val scope = rememberCoroutineScope()
     val isBadWeather = remember { mutableStateOf(false) }
@@ -70,7 +69,7 @@ fun WeatherAlarmScreen(
                         AlarmItem(
                             modifier = Modifier,
                             alarmUiState = item,
-                            expandedAlarmItem = { alarmViewModel.expandedAlarmItem() },
+                            // expandedAlarmItem = { alarmViewModel.expandedAlarmItem() },
                             updateUntilTime = { id, hours, minutes ->
                                 alarmViewModel.updateUntilAlarmTime(id, hours, minutes)
                             },
