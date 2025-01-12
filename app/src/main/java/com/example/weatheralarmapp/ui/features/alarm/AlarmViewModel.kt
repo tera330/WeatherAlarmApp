@@ -28,7 +28,6 @@ class AlarmViewModel
     @Inject
     constructor(
         private val alarmItemRepository: AlarmItemRepository,
-        private val getWeatherRepository: GetWeatherRepository,
         private val addAlarmItemUseCase: AddAlarmItemUseCase,
         private val deleteAlarmItemUseCase: DeleteAlarmItemUseCase,
         private val updateAlarmItemUseCase: UpdateAlarmItemUseCase,
