@@ -443,7 +443,6 @@ fun AlarmItemPreview() {
                     ),
                 expandedAlarmItem = false,
                 weatherState = WeatherState.Initial,
-                coordinateState = CoordinateState.Initial,
             ),
         // expandedAlarmItem = { },
         updateUntilTime = { id, hours, minutes -> },

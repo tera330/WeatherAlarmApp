@@ -234,21 +234,12 @@ class AlarmViewModel
             alarmTime: LocalTime,
         ) {
             viewModelScope.launch {
-                updateAlarmUiState(id) {
-                    it.copy(
-                        coordinateState = CoordinateState.Loading,
-                    )
-                }
                 try {
                     val result =
                         withContext(Dispatchers.IO) {
                             getWeatherRepository.getCoordinate(cityName)
                         }
-                    updateAlarmUiState(id) {
-                        it.copy(
-                            coordinateState = CoordinateState.Success(result.lat, result.lon),
-                        )
-                    }
+
                     // TODO 取得開始時刻が不安定のため調査必要。それに応じてcntの計算を修正。
                     // アラームの時間が現在時刻よりも前であれば次の日の時刻とする
                     // 6時から3時間おきに天気情報を取得する
@@ -258,11 +249,13 @@ class AlarmViewModel
                         } else {
                             (alarmTime.hour - FIRST_FORECAST_TIME) / 3 + 1
                         }
+
                     getWeatherByLocation(id, result.lat, result.lon, cnt)
                 } catch (e: Exception) {
+                    Log.d("result", e.message.toString())
                     updateAlarmUiState(id) {
                         it.copy(
-                            coordinateState = CoordinateState.Error(e.message ?: "Unknown error"),
+                            weatherState = WeatherState.Error(e.message ?: "Unknown error"),
                         )
                     }
                 }
