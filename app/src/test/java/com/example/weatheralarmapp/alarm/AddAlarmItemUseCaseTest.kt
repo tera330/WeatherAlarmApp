@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.weather
+package com.example.weatheralarmapp.alarm
 
 import android.app.AlarmManager
 import com.example.weatheralarmapp.data.local.AlarmItem
