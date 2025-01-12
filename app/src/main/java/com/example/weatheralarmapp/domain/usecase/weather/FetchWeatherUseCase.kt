@@ -39,11 +39,6 @@ class FetchWeatherUseCase
 
                 getWeatherByLocation(result.lat, result.lon, cnt)
             } catch (e: Exception) {
-//                updateAlarmUiState(id) {
-//                    it.copy(
-//                        weatherState = WeatherState.Error(e.message ?: "Unknown error"),
-//                    )
-//                }
                 WeatherState.Error(e.message ?: "Unknown error")
             }
 
@@ -51,28 +46,12 @@ class FetchWeatherUseCase
             lat: Double,
             lon: Double,
             cnt: Int,
-        ): WeatherState {
-//            updateAlarmUiState(id) {
-//                it.copy(
-//                    weatherState = WeatherState.Loading,
-//                )
-//            }
-            return try {
+        ): WeatherState =
+            try {
                 val result =
                     withContext(Dispatchers.IO) {
                         getWeatherRepository.getWeather(lat, lon, cnt)
                     }
-//                updateAlarmUiState(id) {
-//                    it.copy(
-//                        weatherState =
-//                        WeatherState.Success(
-//                            result.list
-//                                .last()
-//                                .weather[0]
-//                                .description,
-//                        ),
-//                    )
-//                }
                 WeatherState.Success(
                     result.list
                         .last()
@@ -81,12 +60,6 @@ class FetchWeatherUseCase
                 )
             } catch (e: Exception) {
                 Log.d("result", e.message.toString())
-//                updateAlarmUiState(id) {
-//                    it.copy(
-//                        weatherState = WeatherState.Error(e.message ?: "Unknown error"),
-//                    )
-//                }
                 WeatherState.Error(e.message ?: "Unknown error")
             }
-        }
     }

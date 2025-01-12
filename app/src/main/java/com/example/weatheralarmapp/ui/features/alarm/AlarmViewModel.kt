@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.weatheralarmapp.data.local.AlarmItem
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
-import com.example.weatheralarmapp.data.repository.GetWeatherRepository
 import com.example.weatheralarmapp.domain.usecase.alarm.AddAlarmItemUseCase
 import com.example.weatheralarmapp.domain.usecase.alarm.DeleteAlarmItemUseCase
 import com.example.weatheralarmapp.domain.usecase.alarm.UpdateAlarmItemUseCase
