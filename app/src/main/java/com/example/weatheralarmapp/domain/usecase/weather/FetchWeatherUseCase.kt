@@ -1,6 +1,5 @@
 package com.example.weatheralarmapp.domain.usecase.weather
 
-import android.util.Log
 import com.example.weatheralarmapp.data.repository.GetWeatherRepository
 import com.example.weatheralarmapp.ui.features.alarm.WeatherState
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +14,7 @@ class FetchWeatherUseCase
         private val getWeatherRepository: GetWeatherRepository,
     ) {
         private val currentTime = LocalDateTime.now()
-        private val FIRST_FORECAST_TIME = 6
+        private val FIRST_FORECAST_TIME = 15
 
         suspend fun getWeatherByCityName(
             cityName: String,
@@ -29,7 +28,7 @@ class FetchWeatherUseCase
 
                 // TODO 取得開始時刻が不安定のため調査必要。それに応じてcntの計算を修正。
                 // アラームの時間が現在時刻よりも前であれば次の日の時刻とする
-                // 6時から3時間おきに天気情報を取得する
+                // cnt = 1で午後１５時から3時間おきに天気情報を取得する
                 val cnt =
                     if (alarmTime.hour < currentTime.hour) {
                         (alarmTime.hour + 24 - FIRST_FORECAST_TIME) / 3 + 1
@@ -38,6 +37,7 @@ class FetchWeatherUseCase
                     }
 
                 getWeatherByLocation(result.lat, result.lon, cnt)
+
             } catch (e: Exception) {
                 WeatherState.Error(e.message ?: "Unknown error")
             }
@@ -52,6 +52,7 @@ class FetchWeatherUseCase
                     withContext(Dispatchers.IO) {
                         getWeatherRepository.getWeather(lat, lon, cnt)
                     }
+
                 WeatherState.Success(
                     result.list
                         .last()
@@ -59,7 +60,6 @@ class FetchWeatherUseCase
                         .description,
                 )
             } catch (e: Exception) {
-                Log.d("result", e.message.toString())
                 WeatherState.Error(e.message ?: "Unknown error")
             }
     }
