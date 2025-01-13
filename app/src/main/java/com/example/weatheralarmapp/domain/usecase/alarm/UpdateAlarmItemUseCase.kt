@@ -1,4 +1,4 @@
-package com.example.weatheralarmapp.domain.usecase
+package com.example.weatheralarmapp.domain.usecase.alarm
 
 import android.app.AlarmManager
 import com.example.weatheralarmapp.data.local.AlarmItem

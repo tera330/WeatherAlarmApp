@@ -91,6 +91,15 @@ fun AlarmItem(
                             ),
                     ),
         ) {
+            // 時間を変更した時に天気を再取得するため
+            // タイムピッカーが閉じた時に取得すると、古いデータを参照してしまうため
+            LaunchedEffect(alarmItemState.alarmTime) {
+                if (alarmItemState.isAlarmOn) {
+                    fetchWeather()
+                    isFetched.value = true
+                }
+            }
+
             if (alarmItemState.isAlarmOn) {
                 if (!isFetched.value) {
                     fetchWeather()
@@ -268,7 +277,6 @@ fun AlarmItem(
                 val hourStr: String = createHourString(timePicker.hour)
                 val minuteStr: String = createMinuteString(timePicker.minute)
                 selectTime("$hourStr:$minuteStr")
-                fetchWeather()
                 showTimePicker = false
             },
             onDismiss = { showTimePicker = false },
@@ -443,7 +451,6 @@ fun AlarmItemPreview() {
                     ),
                 expandedAlarmItem = false,
                 weatherState = WeatherState.Initial,
-                coordinateState = CoordinateState.Initial,
             ),
         // expandedAlarmItem = { },
         updateUntilTime = { id, hours, minutes -> },

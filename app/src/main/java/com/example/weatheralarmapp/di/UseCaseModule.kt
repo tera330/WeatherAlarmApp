@@ -3,7 +3,7 @@ package com.example.weatheralarmapp.di
 import android.content.Context
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
 import com.example.weatheralarmapp.domain.AlarmHelper
-import com.example.weatheralarmapp.domain.usecase.AddAlarmItemUseCase
+import com.example.weatheralarmapp.domain.usecase.alarm.AddAlarmItemUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

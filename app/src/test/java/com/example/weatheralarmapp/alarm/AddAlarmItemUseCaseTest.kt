@@ -1,10 +1,10 @@
-package com.example.weatheralarmapp.weather
+package com.example.weatheralarmapp.alarm
 
 import android.app.AlarmManager
 import com.example.weatheralarmapp.data.local.AlarmItem
 import com.example.weatheralarmapp.data.repository.AlarmItemRepository
 import com.example.weatheralarmapp.domain.AlarmHelper
-import com.example.weatheralarmapp.domain.usecase.AddAlarmItemUseCase
+import com.example.weatheralarmapp.domain.usecase.alarm.AddAlarmItemUseCase
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
