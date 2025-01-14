@@ -15,7 +15,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,9 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.weatheralarmapp.R
 import com.example.weatheralarmapp.ui.features.alarm.components.ToggleTimePicker
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +37,6 @@ fun WeatherAlarmScreen(
 ) {
     val context = LocalContext.current
     val alarmManager = context.getSystemService(AlarmManager::class.java) as AlarmManager
-    val scope = rememberCoroutineScope()
     val isBadWeather = remember { mutableStateOf(false) }
 
     val alarmUiState = alarmViewModel.alarmUiState.collectAsState().value
@@ -77,61 +72,49 @@ fun WeatherAlarmScreen(
                                 alarmViewModel.updateUntilAlarmTimeByWeather(id, hours, minutes)
                             },
                             onSwitchAlarm = { Boolean ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        alarmViewModel.updateAlarmItem(
-                                            alarmManager,
-                                            com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.alarmItemState.id,
-                                                alarmTime = item.alarmItemState.alarmTime,
-                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
-                                                isAlarmOn = Boolean,
-                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
-                                            ),
-                                            isBadWeather.value,
-                                        )
-                                    }
-                                }
+                                alarmViewModel.updateAlarmItem(
+                                    alarmManager,
+                                    com.example.weatheralarmapp.data.local.AlarmItem(
+                                        id = item.alarmItemState.id,
+                                        alarmTime = item.alarmItemState.alarmTime,
+                                        selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
+                                        changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
+                                        isAlarmOn = Boolean,
+                                        isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
+                                    ),
+                                    isBadWeather.value,
+                                )
                             },
                             onSwitchWeatherForecast = { Boolean ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        alarmViewModel.updateAlarmItem(
-                                            alarmManager,
-                                            com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.alarmItemState.id,
-                                                alarmTime = item.alarmItemState.alarmTime,
-                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
-                                                isAlarmOn = item.alarmItemState.isAlarmOn,
-                                                isWeatherForecastOn = Boolean,
-                                            ),
-                                            isBadWeather.value,
-                                        )
-                                    }
-                                }
+                                alarmViewModel.updateAlarmItem(
+                                    alarmManager,
+                                    com.example.weatheralarmapp.data.local.AlarmItem(
+                                        id = item.alarmItemState.id,
+                                        alarmTime = item.alarmItemState.alarmTime,
+                                        selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
+                                        changedAlarmTImeByWeather = item.alarmItemState.changedAlarmTImeByWeather,
+                                        isAlarmOn = item.alarmItemState.isAlarmOn,
+                                        isWeatherForecastOn = Boolean,
+                                    ),
+                                    isBadWeather.value,
+                                )
                             },
                             isBadWeather = { Boolean ->
                                 isBadWeather.value = Boolean
                             },
                             selectTime = { String ->
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        alarmViewModel.updateAlarmItem(
-                                            alarmManager,
-                                            com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.alarmItemState.id,
-                                                alarmTime = String,
-                                                selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
-                                                changedAlarmTImeByWeather = String,
-                                                isAlarmOn = item.alarmItemState.isAlarmOn,
-                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
-                                            ),
-                                            isBadWeather.value,
-                                        )
-                                    }
-                                }
+                                alarmViewModel.updateAlarmItem(
+                                    alarmManager,
+                                    com.example.weatheralarmapp.data.local.AlarmItem(
+                                        id = item.alarmItemState.id,
+                                        alarmTime = String,
+                                        selectedEarlyAlarmTime = item.alarmItemState.selectedEarlyAlarmTime,
+                                        changedAlarmTImeByWeather = String,
+                                        isAlarmOn = item.alarmItemState.isAlarmOn,
+                                        isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
+                                    ),
+                                    isBadWeather.value,
+                                )
                             },
                             selectRadioButton = { String ->
                                 val baseTime = LocalTime.parse(item.alarmItemState.alarmTime)
@@ -144,29 +127,21 @@ fun WeatherAlarmScreen(
                                         "00:60" -> baseTime.minusHours(1).toString()
                                         else -> item.alarmItemState.alarmTime
                                     }
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        alarmViewModel.updateAlarmItem(
-                                            alarmManager,
-                                            com.example.weatheralarmapp.data.local.AlarmItem(
-                                                id = item.alarmItemState.id,
-                                                alarmTime = item.alarmItemState.alarmTime,
-                                                selectedEarlyAlarmTime = String,
-                                                changedAlarmTImeByWeather = changedAlarmTImeByWeather,
-                                                isAlarmOn = item.alarmItemState.isAlarmOn,
-                                                isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
-                                            ),
-                                            isBadWeather.value,
-                                        )
-                                    }
-                                }
+                                alarmViewModel.updateAlarmItem(
+                                    alarmManager,
+                                    com.example.weatheralarmapp.data.local.AlarmItem(
+                                        id = item.alarmItemState.id,
+                                        alarmTime = item.alarmItemState.alarmTime,
+                                        selectedEarlyAlarmTime = String,
+                                        changedAlarmTImeByWeather = changedAlarmTImeByWeather,
+                                        isAlarmOn = item.alarmItemState.isAlarmOn,
+                                        isWeatherForecastOn = item.alarmItemState.isWeatherForecastOn,
+                                    ),
+                                    isBadWeather.value,
+                                )
                             },
                             onDeleteAlarm = {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        alarmViewModel.deleteAlarmItem(item, alarmManager)
-                                    }
-                                }
+                                alarmViewModel.deleteAlarmItem(item, alarmManager)
                             },
                             fetchWeather = {
                                 alarmViewModel.getWeatherByCityName(
@@ -198,19 +173,18 @@ fun WeatherAlarmScreen(
                             timePicker.minute.toString()
                         }
 
-                    scope.launch {
-                        alarmViewModel.addAlarmItem(
-                            alarmManager = alarmManager,
-                            com.example.weatheralarmapp.data.local.AlarmItem(
-                                id = alarmItemState.id,
-                                alarmTime = "$hourStr:$minuteStr",
-                                selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
-                                changedAlarmTImeByWeather = "$hourStr:$minuteStr",
-                                isAlarmOn = alarmItemState.isAlarmOn,
-                                isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
-                            ),
-                        )
-                    }
+                    alarmViewModel.addAlarmItem(
+                        alarmManager = alarmManager,
+                        com.example.weatheralarmapp.data.local.AlarmItem(
+                            id = alarmItemState.id,
+                            alarmTime = "$hourStr:$minuteStr",
+                            selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
+                            changedAlarmTImeByWeather = "$hourStr:$minuteStr",
+                            isAlarmOn = alarmItemState.isAlarmOn,
+                            isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
+                        ),
+                    )
+
                     onShowTimePickerChange(false)
                 },
                 onDismiss = { onShowTimePickerChange(false) },

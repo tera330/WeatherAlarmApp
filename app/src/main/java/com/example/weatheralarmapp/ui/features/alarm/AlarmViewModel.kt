@@ -189,38 +189,34 @@ class AlarmViewModel
             }
         }
 
-        suspend fun addAlarmItem(
+        fun addAlarmItem(
             alarmManager: AlarmManager,
             alarmItem: AlarmItem,
         ) {
-            addAlarmItemUseCase.addAlarmItem(alarmManager, alarmItem)
+            viewModelScope.launch {
+                addAlarmItemUseCase.addAlarmItem(alarmManager, alarmItem)
+            }
         }
 
-        suspend fun updateAlarmItem(
+        fun updateAlarmItem(
             alarmManager: AlarmManager,
             alarmItem: AlarmItem,
             isBadWeather: Boolean,
         ) {
-            updateAlarmItemUseCase.updateAlarmItem(alarmManager, alarmItem, isBadWeather)
+            viewModelScope.launch {
+                updateAlarmItemUseCase.updateAlarmItem(alarmManager, alarmItem, isBadWeather)
+            }
         }
 
-        suspend fun deleteAlarmItem(
+        fun deleteAlarmItem(
             alarmUiState: AlarmUiState,
             alarmManager: AlarmManager,
         ) {
             val alarmItem = alarmUiState.alarmItemState.toAlarmItem(alarmUiState.alarmItemState)
-            deleteAlarmItemUseCase.deleteAlarmItem(alarmItem, alarmManager)
+            viewModelScope.launch {
+                deleteAlarmItemUseCase.deleteAlarmItem(alarmItem, alarmManager)
+            }
         }
-
-        private fun AlarmItemState.toAlarmItem(alarmItemState: AlarmItemState): AlarmItem =
-            AlarmItem(
-                id = alarmItemState.id,
-                alarmTime = alarmItemState.alarmTime,
-                changedAlarmTImeByWeather = alarmItemState.changedAlarmTImeByWeather,
-                selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
-                isAlarmOn = alarmItemState.isAlarmOn,
-                isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
-            )
 
         fun getWeatherByCityName(
             id: Int,

@@ -1,5 +1,7 @@
 package com.example.weatheralarmapp.ui.features.alarm
 
+import com.example.weatheralarmapp.data.local.AlarmItem
+
 // Roomが保持するデータ
 data class AlarmItemState(
     val id: Int = 0,
@@ -34,3 +36,13 @@ data class AlarmUiState(
     var earlyHoursUntilAlarmByWeather: Long = 10L,
     var earlyMinutesUntilAlarmByWeather: Long = 10L,
 )
+
+fun AlarmItemState.toAlarmItem(alarmItemState: AlarmItemState): AlarmItem =
+    AlarmItem(
+        id = alarmItemState.id,
+        alarmTime = alarmItemState.alarmTime,
+        changedAlarmTImeByWeather = alarmItemState.changedAlarmTImeByWeather,
+        selectedEarlyAlarmTime = alarmItemState.selectedEarlyAlarmTime,
+        isAlarmOn = alarmItemState.isAlarmOn,
+        isWeatherForecastOn = alarmItemState.isWeatherForecastOn,
+    )
