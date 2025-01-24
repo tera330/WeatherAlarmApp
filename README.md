@@ -5,7 +5,4 @@
 <br>雨や雪の日など、当日の思わぬ悪天候で朝が忙しくなる（自転車が使えない、寒さで車が凍るなどで目的地に遅刻する）ことを解決するため、
 シンプルな目覚まし機能に加え、アラーム時刻の天気を取得し、悪天候の際にアラームの時刻よりも早めにアラームを鳴らす。
 # 📷スクリーンショット
-| 天気機能オフ | 天気機能オン＆30分の選択 |
-|-|-|
-| <img src="https://github.com/user-attachments/assets/2d92bbdc-45ec-47c7-b637-85dfd2b79027" width = "300" /> | <img src="https://github.com/user-attachments/assets/028723f7-e3df-4af9-80b0-128e54cfef4d" width="300" /> |
-||天気APIの結果が雨雪の際に、「⚪︎分後にアラームが鳴ります」<br>のUIとアラームが３０分早く再計算される|
+<img src="https://github.com/user-attachments/assets/7549dbd6-b9f0-4c52-bd16-d1e6490028f0" width="300" /> 
